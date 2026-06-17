@@ -79,7 +79,7 @@ Good first issues are labeled `good first issue` once they exist.
 
 ## Status
 
-**v0.2.0** — FTP adapter, watch-mode auto-ingest, and a node:test smoke suite landed on top of v0.1. Auth / multi-user and one-click GDrive OAuth are on the v0.3 list. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**v0.3.0** — one-click GDrive OAuth in the wizard + config-file read-back (`codenanny.config.json` is honored on subsequent `serve`/`export` runs). Auth / multi-user and SSE push are on the v0.4 list. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Why
 

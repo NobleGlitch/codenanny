@@ -1,6 +1,6 @@
 {
   "name": "@codenanny/cli",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Command-line entry for codenanny: wizard, serve, ingest, export.",
   "license": "MIT",
   "author": "desertshibari-crypto",
@@ -18,11 +18,11 @@
     "node": ">=20"
   },
   "dependencies": {
-    "codenanny": "^0.2.0",
-    "plugkit": "^0.2.0",
-    "@codenanny/ui": "^0.2.0",
-    "@codenanny/wizard": "^0.2.0",
-    "@codenanny/adapters": "^0.2.0",
+    "codenanny": "^0.3.0",
+    "plugkit": "^0.3.0",
+    "@codenanny/ui": "^0.3.0",
+    "@codenanny/wizard": "^0.3.0",
+    "@codenanny/adapters": "^0.3.0",
     "express": "^4.19.0",
     "better-sqlite3": "^11.0.0"
   }

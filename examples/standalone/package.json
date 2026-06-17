@@ -9,9 +9,9 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "plugkit": "^0.2.0",
-    "codenanny": "^0.2.0",
-    "@codenanny/ui": "^0.2.0",
+    "plugkit": "^0.3.0",
+    "codenanny": "^0.3.0",
+    "@codenanny/ui": "^0.3.0",
     "express": "^4.19.0",
     "better-sqlite3": "^11.0.0"
   }

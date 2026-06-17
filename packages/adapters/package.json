@@ -1,6 +1,6 @@
 {
   "name": "@codenanny/adapters",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Delivery adapters for codenanny static exports (local/gdrive/ftp/scp).",
   "license": "MIT",
   "author": "desertshibari-crypto",

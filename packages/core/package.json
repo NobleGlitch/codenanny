@@ -1,6 +1,6 @@
 {
   "name": "codenanny",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Turn AI-generated project sprawl into a searchable, contextualized library. Ingests Claude Code transcripts; serves them as a navigable web UI or exports as a static bundle.",
   "license": "MIT",
   "author": "desertshibari-crypto",
@@ -29,7 +29,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "plugkit": "^0.2.0",
+    "plugkit": "^0.3.0",
     "express": "^4.19.0",
     "better-sqlite3": "^11.0.0",
     "chokidar": "^3.6.0"

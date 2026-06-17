@@ -1,6 +1,6 @@
 {
   "name": "codenanny-monorepo",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "codenanny + plugkit — turn AI-generated project sprawl into a searchable, contextualized library.",
   "license": "MIT",

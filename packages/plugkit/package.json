@@ -1,6 +1,6 @@
 {
   "name": "plugkit",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Tiny plugin contract for modular Express apps. Mount routers, share events, declare sqlite schemas, contribute to nav.",
   "license": "MIT",
   "author": "desertshibari-crypto",
