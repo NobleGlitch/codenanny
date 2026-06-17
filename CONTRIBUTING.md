@@ -65,7 +65,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design.
 
 1. Fork the repo and create a feature branch from `main`.
 2. Make your change. Keep the diff focused on one thing.
-3. Test it locally — at minimum, `node --check` all changed `.js` files and run the wizard end-to-end if you touched runtime code.
+3. Test it locally — run `npm test` (uses Node's built-in test runner, no extra deps) and `node --check` all changed `.js` files.
 4. Open a PR using the [PR template](.github/PULL_REQUEST_TEMPLATE.md).
 5. Be ready for feedback. We'll usually respond within a few days.
 

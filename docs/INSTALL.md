@@ -20,7 +20,7 @@ cd codenanny
 npm install
 ```
 
-That's a workspace install — every package in `packages/*` is symlinked, every dep is fetched once into the root `node_modules/`.
+That's a workspace install — every package in `packages/*` is symlinked, every dep is fetched once into the root `node_modules/`. Run `npm test` to verify the installation with the built-in Node test suite (no extra dependencies required).
 
 ## First run — the wizard
 

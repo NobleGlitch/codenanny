@@ -1,0 +1,3 @@
+{"type":"user","timestamp":1700000000000,"message":{"role":"user","content":[{"type":"text","text":"write a helper function in src/foo.js"}]}}
+{"type":"assistant","timestamp":1700000001000,"message":{"role":"assistant","content":[{"type":"text","text":"Sure, I'll create that file for you."},{"type":"tool_use","id":"toolu_01","name":"Write","input":{"file_path":"src/foo.js","content":"export function foo() { return 42; }"}}]}}
+{"type":"user","timestamp":1700000002000,"message":{"role":"user","content":[{"type":"text","text":"now add a test for foo"}]}}
