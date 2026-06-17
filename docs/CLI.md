@@ -84,7 +84,7 @@ codenanny -h
 | local path | `./codenanny-export`, `/var/www/codenanny` | Creates dir if missing |
 | `scp://` | `scp://alice@noble1:22/home/alice/codenanny` | Password OR PEM key; auto-detected |
 | `gdrive://` | `gdrive://0AbCd1234EfGhI` | The string after `gdrive://` is the folder ID |
-| `ftp://` | `ftp://host/dir` | v0.2 — currently a stub |
+| `ftp://` | `ftp://host/dir` | Plain FTP; port 990 or `CODENANNY_FTP_SECURE=true` for FTPS |
 
 For credentials via env (recommended) instead of inline URL, use the wizard or set:
 

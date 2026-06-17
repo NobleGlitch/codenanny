@@ -7,7 +7,7 @@ Delivery adapters for codenanny static exports.
 | `local`  | Functional | filesystem |
 | `scp`    | Functional | `ssh2-sftp-client` |
 | `gdrive` | Functional (credential-based) | Google Drive REST v3 (no SDK; uses `fetch`) |
-| `ftp`    | Stub (v0.2) | — |
+| `ftp`    | Functional | `basic-ftp` (plain FTP + FTPS; password auth only, key auth deferred) |
 
 ```js
 import { getAdapter } from '@codenanny/adapters';
@@ -37,7 +37,12 @@ deliver(bundle, options) -> Promise<{ type, location, sessions_written, ... }>
   - or `host`=client_id, `user`=client_secret, `auth`=refresh_token
 
 ### `ftp`
-- Stub. v0.2 will add `basic-ftp` support.
+- `host` — hostname or `host:port` (env: `CODENANNY_FTP_HOST`)
+- `user` — FTP username (env: `CODENANNY_FTP_USER`)
+- `auth` — FTP password (env: `CODENANNY_FTP_AUTH`)
+- `path` — remote directory (created automatically via `ensureDir`)
+- **TLS:** port 990 → implicit FTPS; `CODENANNY_FTP_SECURE=true` → explicit FTPS; otherwise plain FTP on port 21.
+- Key-based auth is not yet supported (password only).
 
 ## Google Drive one-time setup
 

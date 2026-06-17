@@ -143,6 +143,6 @@ You'll need to add the `myservice://` scheme parser to `packages/cli/src/export-
 | `local` | functional | Writes `index.html` + `index.json` to a directory |
 | `scp` | functional | `ssh2-sftp-client`; password or PEM key auto-detected |
 | `gdrive` | functional | Refresh-token flow; multipart upload via native fetch |
-| `ftp` | stub | v0.2 — pull requests welcome |
+| `ftp` | functional | `basic-ftp`; plain FTP by default, FTPS via port 990 or `CODENANNY_FTP_SECURE=true`; password auth only |
 
 If you write a Dropbox / S3 / B2 / IPFS / WebDAV / Mega / etc. adapter, open a PR. We're happy to ship more.
