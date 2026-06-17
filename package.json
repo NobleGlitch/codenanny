@@ -19,9 +19,7 @@
     "wizard": "node packages/cli/bin/codenanny.js wizard",
     "ingest": "node packages/cli/bin/codenanny.js ingest",
     "serve": "node packages/cli/bin/codenanny.js serve",
-    "export": "node packages/cli/bin/codenanny.js export",
-    "test": "echo \"TODO: tests\" && exit 0",
-    "lint": "echo \"TODO: lint\" && exit 0"
+    "export": "node packages/cli/bin/codenanny.js export"
   },
   "engines": {
     "node": ">=20"

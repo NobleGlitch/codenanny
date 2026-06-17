@@ -23,7 +23,7 @@ Options:
   --dest <path>   Destination for export. Schemes:
                     /path           — local directory
                     gdrive://folder — Google Drive folder
-                    ftp://host/path — FTP server
+                    ftp://host/path — FTP server (stub — coming in v0.2)
                     scp://user@host/path — SCP/SSH
 
 Examples:

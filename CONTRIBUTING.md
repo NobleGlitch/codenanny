@@ -72,7 +72,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the full design.
 ### Code style
 
 - ES modules (`type: "module"`) throughout.
-- Two-space indent, single quotes, no semicolons-omitted (we use semicolons for clarity).
+- Two-space indent, single quotes, semicolons required.
 - Don't introduce a build step — codenanny ships as plain JS that runs on Node 20+.
 - Vanilla web — no framework in the UI. Keep it boring and readable.
 - Prefer few dependencies. New runtime deps need justification.
