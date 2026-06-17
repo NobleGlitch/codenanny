@@ -25,6 +25,8 @@ Options:
                     gdrive://folder — Google Drive folder
                     ftp://host/path — FTP server (stub — coming in v0.2)
                     scp://user@host/path — SCP/SSH
+  --config <path> Path to config file (default ./codenanny.config.json)
+  --no-config     Skip reading the config file (useful in CI / pure-CLI flows)
 
 Examples:
   codenanny wizard

@@ -79,6 +79,70 @@ codenanny -h
 | `--ingest=false` | `true` | Skip startup ingest (`serve` only) |
 | `--watch=false` | `true` | Disable chokidar watch mode (`serve` and `wizard` live mode only) |
 
+## Config file
+
+`codenanny serve` and `codenanny export` automatically read `codenanny.config.json` from the current working directory on startup. The wizard creates this file for you when you submit the setup form — meaning you don't need to re-pass CLI flags on subsequent runs.
+
+### Shape
+
+```json
+{
+  "mode": "live",
+  "source": "~/.claude/projects",
+  "db": "./codenanny.db",
+  "port": 7700,
+  "watch": true,
+  "destination_type": "local",
+  "path": "./codenanny-export",
+  "host": "scp-or-ftp-host",
+  "user": "username",
+  "auth": "password-or-key",
+  "redact_secrets": false,
+  "schedule": "manual"
+}
+```
+
+All keys are optional. An empty `{}` or missing file is silently ignored.
+
+`mode` values: `"live"` | `"export"`.
+`destination_type` values: `"local"` | `"gdrive"` | `"scp"` | `"ftp"`.
+`schedule` values: `"manual"` | `"hourly"` | `"daily"` | `"weekly"`.
+
+### Precedence
+
+```
+CLI args  >  codenanny.config.json  >  built-in defaults
+```
+
+A flag you pass on the command line always wins over the config file value.
+
+### `--config <path>`
+
+Point at a non-default config file location:
+
+```bash
+codenanny serve --config /etc/codenanny/prod.json
+```
+
+Relative paths are resolved against `process.cwd()`.
+
+### `--no-config`
+
+Explicitly skip config-file reading — useful in CI environments or when you want pure CLI behaviour with no implicit file state:
+
+```bash
+codenanny serve --no-config --port 7700 --db ./codenanny.db
+```
+
+### Error handling
+
+| Situation | Behaviour |
+|---|---|
+| File absent | Silent — treated as if no config exists |
+| File present, empty `{}` | Silent no-op |
+| File present, malformed JSON | Error message with file path + parse error, exit 2 |
+| Unknown key in file | Warning logged, key ignored (forward-compatible) |
+
 ## Destination schemes (`--dest`)
 
 | Scheme | Example | Notes |

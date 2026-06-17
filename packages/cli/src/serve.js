@@ -4,6 +4,7 @@ import { join, resolve, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { createHost } from 'plugkit';
 import codenanny, { ingestAll, startWatch } from 'codenanny';
+import { loadConfig } from './config.js';
 
 function resolvePath(p, fallback) {
   if (!p) return fallback;
@@ -11,7 +12,8 @@ function resolvePath(p, fallback) {
   return isAbsolute(p) ? p : resolve(process.cwd(), p);
 }
 
-export async function startServer(args) {
+export async function startServer(rawArgs) {
+  const args = loadConfig(rawArgs);
   const dbPath = resolvePath(args.db, resolve(process.cwd(), 'codenanny.db'));
   const srcPath = resolvePath(args.src, join(homedir(), '.claude/projects'));
   const port = parseInt(args.port) || 7700;

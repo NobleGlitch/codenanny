@@ -3,6 +3,7 @@ import { join, resolve, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import codenanny, { createApi, ingestAll } from 'codenanny';
 import { getAdapter } from '@codenanny/adapters';
+import { loadConfig } from './config.js';
 
 function resolvePath(p, fallback) {
   if (!p) return fallback;
@@ -18,10 +19,26 @@ function parseDestination(dest) {
   return { type: 'local', path: resolvePath(dest) };
 }
 
-export async function runExport(args) {
+export async function runExport(rawArgs) {
+  const args = loadConfig(rawArgs);
   const dbPath = resolvePath(args.db, resolve(process.cwd(), 'codenanny.db'));
   const srcPath = resolvePath(args.src, join(homedir(), '.claude/projects'));
-  const destination = parseDestination(args.dest);
+
+  // Resolve destination: prefer explicit --dest CLI flag, then config-file fields
+  let destination;
+  if (args.dest) {
+    destination = parseDestination(args.dest);
+  } else if (args.destination_type) {
+    destination = {
+      type: args.destination_type,
+      path: args.path || resolve(process.cwd(), 'codenanny-export'),
+      host: args.host,
+      user: args.user,
+      auth: args.auth,
+    };
+  } else {
+    destination = parseDestination(undefined);
+  }
 
   const db = new Database(dbPath);
   db.pragma('journal_mode = WAL');

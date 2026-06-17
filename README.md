@@ -63,6 +63,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for prerequisites and troubleshooting.
 - **HTTP API** for embedding codenanny data in your own tools
 - **Library API** for embedding codenanny *itself* in your own Node app
 - **Watch mode** — live mode auto-re-ingests when new transcripts land in the source dir (chokidar; disable with --watch=false)
+- **Config file** — the wizard saves your choices to `codenanny.config.json` so future `serve` and `export` calls inherit them without re-passing flags; override any value with a CLI flag or opt out with `--no-config`
 - **plugkit modules** — extend the host with your own sqlite-backed, router-backed modules
 
 ## Contributing
