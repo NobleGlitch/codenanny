@@ -52,6 +52,7 @@ const steps = [
       { name: 'auth', type: 'password', placeholder: 'password / key / refresh_token' },
       { name: 'path', type: 'text', placeholder: 'destination path / GDrive folder id' },
     ],
+    gdrive_oauth: true,
   },
   {
     id: 'options',
@@ -131,6 +132,12 @@ function render() {
       render();
     });
     for (const f of step.fields) form.appendChild(renderField(f));
+
+    // Inject the GDrive one-click OAuth button when gdrive is the selected destination.
+    if (step.gdrive_oauth && state.destination_type === 'gdrive') {
+      form.appendChild(renderGdriveOauthBlock(form));
+    }
+
     const submit = document.createElement('button');
     submit.type = 'submit';
     submit.textContent = 'Next';
@@ -163,6 +170,98 @@ function render() {
   card.appendChild(progress);
 
   root.appendChild(card);
+}
+
+// ---------------------------------------------------------------------------
+// GDrive one-click OAuth helper
+// Reads client_id + client_secret from the form, opens the OAuth popup,
+// waits for the postMessage callback, and back-fills the auth field.
+// ---------------------------------------------------------------------------
+function renderGdriveOauthBlock(form) {
+  const wrap = document.createElement('div');
+  wrap.className = 'field gdrive-oauth-block';
+
+  const hint = document.createElement('p');
+  hint.className = 'hint';
+  hint.textContent =
+    'Recommended — click "Connect Google Drive" to open Google\'s consent screen in a new tab. ' +
+    'The refresh token will be filled in here automatically when you finish. ' +
+    'You still need a client_id and client_secret from your Google Cloud project (see README steps 1–4).';
+  wrap.appendChild(hint);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'btn';
+  btn.textContent = 'Connect Google Drive';
+
+  const status = document.createElement('span');
+  status.className = 'hint';
+  status.style.marginLeft = '0.75rem';
+
+  btn.addEventListener('click', async () => {
+    const clientIdEl = form.querySelector('[name="host"]');
+    const clientSecretEl = form.querySelector('[name="user"]');
+    const authEl = form.querySelector('[name="auth"]');
+
+    const client_id = clientIdEl?.value?.trim();
+    const client_secret = clientSecretEl?.value?.trim();
+
+    if (!client_id || !client_secret) {
+      status.textContent = 'Enter your client_id (host field) and client_secret (user field) first.';
+      return;
+    }
+
+    status.textContent = 'Opening Google consent screen…';
+    btn.disabled = true;
+
+    let startData;
+    try {
+      const r = await fetch(
+        `/oauth/gdrive/start?client_id=${encodeURIComponent(client_id)}&client_secret=${encodeURIComponent(client_secret)}`
+      );
+      startData = await r.json();
+      if (!startData.ok) throw new Error(startData.message || 'start failed');
+    } catch (e) {
+      status.textContent = 'Error: ' + e.message;
+      btn.disabled = false;
+      return;
+    }
+
+    const popup = window.open(startData.url, 'codenanny_gdrive_oauth', 'width=600,height=700,noopener=0');
+
+    function onMessage(evt) {
+      // Accept the message only from the same origin (the wizard itself).
+      if (evt.origin !== window.location.origin) return;
+      let data;
+      try { data = JSON.parse(evt.data); } catch { return; }
+      if (data.type !== 'codenanny:gdrive:oauth') return;
+
+      window.removeEventListener('message', onMessage);
+      if (data.refresh_token && authEl) {
+        authEl.value = data.refresh_token;
+        status.textContent = 'Connected! Refresh token filled in.';
+      } else {
+        status.textContent = 'Connected but no refresh_token received — fill it in manually.';
+      }
+      btn.disabled = false;
+      try { popup?.close(); } catch {}
+    }
+    window.addEventListener('message', onMessage);
+
+    // If the user closes the popup without completing OAuth, re-enable the button.
+    const pollClosed = setInterval(() => {
+      if (popup?.closed) {
+        clearInterval(pollClosed);
+        window.removeEventListener('message', onMessage);
+        if (!authEl?.value) status.textContent = 'Popup closed. Enter the refresh token manually if needed.';
+        btn.disabled = false;
+      }
+    }, 1000);
+  });
+
+  wrap.appendChild(btn);
+  wrap.appendChild(status);
+  return wrap;
 }
 
 function renderField(f) {

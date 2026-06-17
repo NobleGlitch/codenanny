@@ -34,7 +34,7 @@ The wizard listens on `http://localhost:7700` by default. It walks you through:
 2. **Source dir** — where your Claude Code transcripts live (auto-detects `~/.claude/projects/`)
 3. **Destination** (export mode) — local / Google Drive / SCP / FTP
 4. **Local path** (if local destination)
-5. **Credentials** (if remote destination)
+5. **Credentials** (if remote destination) — for Google Drive, click **"Connect Google Drive"** to complete OAuth in a browser popup; the refresh token is filled in automatically (v0.3+)
 6. **Bundle options** — include source files, redact secrets, schedule
 7. **Review** — what will happen, then run
 

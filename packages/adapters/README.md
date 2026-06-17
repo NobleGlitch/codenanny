@@ -46,18 +46,25 @@ deliver(bundle, options) -> Promise<{ type, location, sessions_written, ... }>
 
 ## Google Drive one-time setup
 
-To use the `gdrive` adapter you need an OAuth client and a refresh token. Steps (5 minutes, one-time):
+> **v0.3 simplification:** the wizard now handles step 5 (refresh-token exchange) automatically.
+> You only need steps 1–4 below. Once you have a `client_id` and `client_secret`, click
+> **"Connect Google Drive"** in wizard step 5 — the browser consent screen opens in a popup,
+> and the refresh token is filled in for you when you finish.
+
+To use the `gdrive` adapter you need an OAuth client. Steps (5 minutes, one-time):
 
 1. **Console:** https://console.cloud.google.com → APIs & Services → Library → enable **Google Drive API**.
-2. **Credentials → Create Credentials → OAuth client ID** → application type "Desktop". Note the `client_id` and `client_secret`.
+2. **Credentials → Create Credentials → OAuth client ID** → application type **Web application**.
+   - Under **Authorized redirect URIs**, add exactly: `http://localhost:7700/oauth/gdrive/callback`
+     (this must match the wizard's callback URL precisely — change the port only if you run the wizard on a different port).
+   - Note the `client_id` and `client_secret`.
 3. **OAuth consent screen:** add your Google account as a test user.
-4. **Get a refresh token** via the OAuth Playground (https://developers.google.com/oauthplayground):
-   - Click the gear icon → check "Use your own OAuth credentials" → paste your `client_id` and `client_secret`
-   - In the scopes list, paste: `https://www.googleapis.com/auth/drive.file` → Authorize APIs → grant access
-   - Click "Exchange authorization code for tokens" → copy the **refresh_token**.
-5. Plug `client_id`, `client_secret`, `refresh_token` into the wizard (or pass them to the CLI/adapter).
+4. Paste `client_id` and `client_secret` into the **host** and **user** fields in wizard step 5, then click **"Connect Google Drive"**.
 
-(v0.2 will replace this with a one-click OAuth flow hosted by the wizard itself.)
+**Manual alternative (no wizard):** if you already have a refresh token or prefer the OAuth Playground:
+- Visit https://developers.google.com/oauthplayground, click the gear icon → "Use your own OAuth credentials",
+  paste your `client_id` and `client_secret`, select scope `https://www.googleapis.com/auth/drive.file`,
+  authorize, exchange the code, copy the **refresh_token**, and paste it into the `auth` field directly.
 
 ## Security note
 
