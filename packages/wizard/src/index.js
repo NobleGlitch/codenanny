@@ -14,6 +14,55 @@ const oauthStateMap = new Map();
 const OAUTH_TTL_MS = 10 * 60 * 1000;
 let oauthSweepStarted = false;
 
+// ---------------------------------------------------------------------------
+// Access token cache — keyed by refresh_token, holds { access_token, expires_at }.
+// Avoids hitting Google's token endpoint on every folder-list request.
+// ---------------------------------------------------------------------------
+const accessTokenCache = new Map();
+
+/**
+ * Exchange a refresh token for a short-lived access token, using the in-memory
+ * cache to avoid redundant network calls. Exposed for testing via the optional
+ * `_fetchImpl` parameter.
+ *
+ * @param {{ client_id: string, client_secret: string, refresh_token: string }} creds
+ * @param {typeof fetch} [_fetchImpl]
+ * @returns {Promise<string>}
+ */
+export async function getAccessToken(creds, _fetchImpl = fetch) {
+  const cacheKey = creds.refresh_token;
+  const cached = accessTokenCache.get(cacheKey);
+  // Leave a 60-second buffer before true expiry to avoid edge-case races.
+  if (cached && cached.expires_at - 60_000 > Date.now()) {
+    return cached.access_token;
+  }
+
+  const params = new URLSearchParams({
+    client_id:     creds.client_id,
+    client_secret: creds.client_secret,
+    refresh_token: creds.refresh_token,
+    grant_type:    'refresh_token',
+  });
+  const r = await _fetchImpl('https://oauth2.googleapis.com/token', {
+    method:  'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    body:    params.toString(),
+  });
+  if (!r.ok) {
+    const body = await r.text();
+    const err = new Error(`Token refresh failed (${r.status}): ${body}`);
+    err.status = r.status;
+    throw err;
+  }
+  const data = await r.json();
+  const { access_token, expires_in } = data;
+  accessTokenCache.set(cacheKey, {
+    access_token,
+    expires_at: Date.now() + (expires_in ?? 3600) * 1000,
+  });
+  return access_token;
+}
+
 function startOauthSweepIfNeeded() {
   if (oauthSweepStarted) return;
   oauthSweepStarted = true;
@@ -25,11 +74,15 @@ function startOauthSweepIfNeeded() {
   }, 60_000).unref();
 }
 
-export async function startWizard({ port = 7700, onSubmit } = {}) {
+export async function startWizard({ port = 7700, onSubmit, _fetch, _getAccessToken } = {}) {
   const app = express();
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
   app.use(express.static(publicDir));
+
+  // Allow tests to inject a mock fetch and/or a mock getAccessToken.
+  app.locals._fetch          = _fetch          || null;
+  app.locals._getAccessToken = _getAccessToken || getAccessToken;
 
   // -------------------------------------------------------------------------
   // GET /oauth/gdrive/start?client_id=<id>&client_secret=<secret>
@@ -121,6 +174,126 @@ export async function startWizard({ port = 7700, onSubmit } = {}) {
   </script>
 </body>
 </html>`);
+  });
+
+  // -------------------------------------------------------------------------
+  // GET /oauth/gdrive/folders?refresh_token=&client_id=&client_secret=&parent=<id>
+  // Lists subfolders of <parent> (default: root).  Returns JSON:
+  //   { folders: [{id, name, modifiedTime}], parent: '<parent>' }
+  // Access tokens are cached in memory for ~50 min.
+  // Accepts an optional _fetch override (last query param, not forwarded) for
+  // unit tests; production code never passes it — use the server's _fetchImpl.
+  // -------------------------------------------------------------------------
+  app.get('/oauth/gdrive/folders', async (req, res) => {
+    const { refresh_token, client_id, client_secret, parent = 'root' } = req.query;
+
+    if (!refresh_token || !client_id || !client_secret) {
+      return res.status(400).json({
+        ok: false,
+        message: 'refresh_token, client_id, and client_secret are required',
+      });
+    }
+
+    let access_token;
+    try {
+      access_token = await app.locals._getAccessToken(
+        { client_id, client_secret, refresh_token },
+        app.locals._fetch,
+      );
+    } catch (e) {
+      const status = e.status === 400 ? 401 : 502;
+      return res.status(status).json({ ok: false, message: e.message });
+    }
+
+    const q =
+      `mimeType='application/vnd.google-apps.folder' and '${parent}' in parents and trashed=false`;
+    const driveUrl =
+      'https://www.googleapis.com/drive/v3/files?' +
+      new URLSearchParams({
+        q,
+        fields:  'files(id,name,modifiedTime,parents)',
+        pageSize: '200',
+        orderBy:  'name',
+      }).toString();
+
+    let driveData;
+    try {
+      const r = await (app.locals._fetch || fetch)(driveUrl, {
+        headers: { authorization: `Bearer ${access_token}` },
+      });
+      if (!r.ok) {
+        const body = await r.text();
+        throw new Error(`Drive API error (${r.status}): ${body}`);
+      }
+      driveData = await r.json();
+    } catch (e) {
+      return res.status(502).json({ ok: false, message: e.message });
+    }
+
+    res.json({
+      ok:      true,
+      folders: (driveData.files || []).map(({ id, name, modifiedTime }) => ({ id, name, modifiedTime })),
+      parent,
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // POST /oauth/gdrive/create-folder
+  // Body: { refresh_token, client_id, client_secret, parent, name }
+  // Creates a Drive folder and returns { id, name }.
+  // -------------------------------------------------------------------------
+  app.post('/oauth/gdrive/create-folder', async (req, res) => {
+    const { refresh_token, client_id, client_secret, parent = 'root', name } = req.body;
+
+    if (!refresh_token || !client_id || !client_secret) {
+      return res.status(400).json({
+        ok: false,
+        message: 'refresh_token, client_id, and client_secret are required',
+      });
+    }
+    if (!name || !name.trim()) {
+      return res.status(400).json({ ok: false, message: 'name is required' });
+    }
+
+    let access_token;
+    try {
+      access_token = await app.locals._getAccessToken(
+        { client_id, client_secret, refresh_token },
+        app.locals._fetch,
+      );
+    } catch (e) {
+      return res.status(502).json({ ok: false, message: e.message });
+    }
+
+    const metadata = {
+      name:     name.trim(),
+      mimeType: 'application/vnd.google-apps.folder',
+      parents:  [parent],
+    };
+
+    let created;
+    try {
+      const r = await (app.locals._fetch || fetch)(
+        'https://www.googleapis.com/drive/v3/files?fields=id,name',
+        {
+          method:  'POST',
+          headers: {
+            authorization:  `Bearer ${access_token}`,
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify(metadata),
+        }
+      );
+      if (!r.ok) {
+        const body = await r.text();
+        throw new Error(`Drive API error (${r.status}): ${body}`);
+      }
+      created = await r.json();
+    } catch (e) {
+      return res.status(502).json({ ok: false, message: e.message });
+    }
+
+    res.json({ ok: true, id: created.id, name: created.name });
   });
 
   app.post('/api/wizard/submit', async (req, res) => {

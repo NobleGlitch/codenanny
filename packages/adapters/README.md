@@ -31,7 +31,13 @@ deliver(bundle, options) -> Promise<{ type, location, sessions_written, ... }>
 - `auth` — password OR PEM private key string
 
 ### `gdrive`
-- `path` — Google Drive folder ID (from the folder's URL) or empty for root
+- `path` — Google Drive folder ID or empty for root.
+  **The wizard picks it for you — no manual steps needed.** After completing OAuth
+  in the wizard, the folder picker lets you browse and select a Drive folder by
+  clicking, then writes the ID into this field automatically.
+  Manual paste is still supported for headless or re-config flows: paste the folder
+  ID directly from your Drive URL (the segment after `/folders/`), or use the
+  "Paste folder ID instead" link inside the wizard picker.
 - Credentials, either:
   - `auth` = JSON string `{"client_id":"...","client_secret":"...","refresh_token":"..."}`
   - or `host`=client_id, `user`=client_secret, `auth`=refresh_token
@@ -46,25 +52,19 @@ deliver(bundle, options) -> Promise<{ type, location, sessions_written, ... }>
 
 ## Google Drive one-time setup
 
-> **v0.3 simplification:** the wizard now handles step 5 (refresh-token exchange) automatically.
-> You only need steps 1–4 below. Once you have a `client_id` and `client_secret`, click
-> **"Connect Google Drive"** in wizard step 5 — the browser consent screen opens in a popup,
-> and the refresh token is filled in for you when you finish.
+See [docs/GDRIVE.md](../../docs/GDRIVE.md) for the full canonical walkthrough:
+Cloud Console setup → OAuth in the wizard → folder picker → done.
 
-To use the `gdrive` adapter you need an OAuth client. Steps (5 minutes, one-time):
+**Short version (v0.4+):** enable the Drive API, create an OAuth client ID
+(Web application, redirect URI `http://localhost:7700/oauth/gdrive/callback`),
+paste `client_id` + `client_secret` into the wizard, click **"Connect Google Drive"**,
+and then use the built-in folder picker to select your target folder — no manual
+folder ID copy-paste required.
 
-1. **Console:** https://console.cloud.google.com → APIs & Services → Library → enable **Google Drive API**.
-2. **Credentials → Create Credentials → OAuth client ID** → application type **Web application**.
-   - Under **Authorized redirect URIs**, add exactly: `http://localhost:7700/oauth/gdrive/callback`
-     (this must match the wizard's callback URL precisely — change the port only if you run the wizard on a different port).
-   - Note the `client_id` and `client_secret`.
-3. **OAuth consent screen:** add your Google account as a test user.
-4. Paste `client_id` and `client_secret` into the **host** and **user** fields in wizard step 5, then click **"Connect Google Drive"**.
-
-**Manual alternative (no wizard):** if you already have a refresh token or prefer the OAuth Playground:
-- Visit https://developers.google.com/oauthplayground, click the gear icon → "Use your own OAuth credentials",
-  paste your `client_id` and `client_secret`, select scope `https://www.googleapis.com/auth/drive.file`,
-  authorize, exchange the code, copy the **refresh_token**, and paste it into the `auth` field directly.
+**Manual alternative (no wizard):** if you already have a refresh token, paste it
+directly into the `auth` field and enter the folder ID in the `path` field.
+Or use https://developers.google.com/oauthplayground with scope
+`https://www.googleapis.com/auth/drive.file` to generate a refresh token.
 
 ## Security note
 

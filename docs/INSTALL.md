@@ -97,3 +97,4 @@ rm -f /wherever/codenanny.db /wherever/codenanny.config.json
       proxy_set_header   Connection '';
   }
   ```
+- **Picker shows no folders** — confirm the OAuth scope was `drive.file` (default) OR `drive.readonly` (broader). The picker only sees folders codenanny has access to via the granted scope. If you previously authorized with a narrower scope, revoke access at https://myaccount.google.com/permissions and re-connect to get a fresh token with the correct scope.

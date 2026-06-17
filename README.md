@@ -58,7 +58,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for prerequisites and troubleshooting.
 - **Search** across prompts and content (sqlite FTS5, sub-100ms on tens of thousands of prompts)
 - **Browse** by session, by project, or "every file I've ever generated" (media view)
 - **Rename + reassign** sessions to projects from the UI
-- **Export** to local / SCP / Google Drive / FTP
+- **Export** to local / SCP / Google Drive (with built-in folder picker) / FTP
 - **Static bundle** is self-contained: opens in any browser, fully offline-searchable
 - **HTTP API** for embedding codenanny data in your own tools
 - **Library API** for embedding codenanny *itself* in your own Node app
@@ -80,7 +80,7 @@ Good first issues are labeled `good first issue` once they exist.
 
 ## Status
 
-**v0.3.0** — one-click GDrive OAuth in the wizard + config-file read-back (`codenanny.config.json` is honored on subsequent `serve`/`export` runs). Auth / multi-user and SSE push are on the v0.4 list. See [docs/ROADMAP.md](docs/ROADMAP.md).
+**v0.4.0** (branch) — GDrive folder picker: after OAuth the wizard browses Drive folders natively via the REST API (no client SDK). v0.3.0 shipped one-click OAuth + config-file read-back. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Why
 
