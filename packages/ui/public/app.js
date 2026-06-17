@@ -156,6 +156,7 @@ async function openSession(id) {
     <div class="session-header">
       <div class="title-row">
         <h2 id="session-title">${esc(session.title)}</h2>
+        <button class="btn-small" id="resume-session" title="Copy a paste-ready resume bundle to clipboard">📋 Resume</button>
         <button class="btn-small" id="edit-session">Edit</button>
       </div>
       <div class="meta">${esc(session.project_id || 'no project')} · ${formatTs(session.started_at)} → ${formatTs(session.ended_at)}</div>
@@ -184,6 +185,47 @@ async function openSession(id) {
   `;
   document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => switchTab(t.dataset.tab)));
   document.getElementById('edit-session').onclick = () => showEditForm(session);
+  document.getElementById('resume-session').onclick = (e) => copyResume(session.id, e.currentTarget);
+}
+
+async function copyResume(sessionId, btn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  try {
+    const r = await fetch(`${BASE}/sessions/${encodeURIComponent(sessionId)}/resume?format=text`);
+    const text = await r.text();
+    await copyToClipboard(text);
+    flashButton(btn, '✓ Copied', original);
+  } catch (err) {
+    flashButton(btn, '✗ ' + (err.message || 'Failed'), original);
+  }
+}
+
+async function copyToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+  // Fallback for non-secure contexts (HTTP, older browsers)
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  const ok = document.execCommand('copy');
+  document.body.removeChild(ta);
+  if (!ok) throw new Error('clipboard unavailable');
+}
+
+function flashButton(btn, message, original) {
+  btn.textContent = message;
+  btn.classList.add('btn-flash');
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.classList.remove('btn-flash');
+    btn.disabled = false;
+  }, 1500);
 }
 
 function switchTab(name) {
