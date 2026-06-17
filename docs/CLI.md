@@ -31,6 +31,7 @@ Run the live server (UI + HTTP API + ingest on startup unless disabled).
 codenanny serve
 codenanny serve --port 7700 --db ./codenanny.db --src ~/.claude/projects
 codenanny serve --ingest=false   # skip startup ingest
+codenanny serve --watch=false    # disable file-system watch mode
 ```
 
 The UI is mounted at `/app`. The API lives under `/codenanny/api/`.
@@ -76,6 +77,7 @@ codenanny -h
 | `--port <n>` | `7700` | HTTP port (`serve` and `wizard`) |
 | `--dest <path>` | (required for `export`) | Destination URL or path (see schemes below) |
 | `--ingest=false` | `true` | Skip startup ingest (`serve` only) |
+| `--watch=false` | `true` | Disable chokidar watch mode (`serve` and `wizard` live mode only) |
 
 ## Destination schemes (`--dest`)
 

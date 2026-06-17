@@ -5,7 +5,7 @@ import { homedir } from 'node:os';
 import Database from 'better-sqlite3';
 import { startWizard as runWizard } from '@codenanny/wizard';
 import { createHost } from 'plugkit';
-import codenanny, { ingestAll, createApi } from 'codenanny';
+import codenanny, { ingestAll, startWatch, createApi } from 'codenanny';
 import { publicDir as uiPublic } from '@codenanny/ui';
 import { getAdapter } from '@codenanny/adapters';
 
@@ -47,6 +47,18 @@ export async function startWizard(args) {
         } catch (e) {
           console.warn(`[wizard] ingest error: ${e.message}`);
         }
+
+        if (args.watch !== 'false') {
+          const watcher = startWatch(db, src, {
+            onIngest: ({ sessionId }) =>
+              host.events.emit('codenanny:session:updated', { id: sessionId, source: 'watch' }),
+          });
+          console.log(`[wizard] watching ${src} for transcript changes`);
+          const stop = () => watcher.stop();
+          process.on('SIGTERM', stop);
+          process.on('SIGINT', stop);
+        }
+
         liveMounted = true;
         return {
           message: `Live server up. Indexed ${indexed.ingested}/${indexed.total} transcripts from ${src}. UI mounted at /app.`,

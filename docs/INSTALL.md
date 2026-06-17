@@ -38,7 +38,7 @@ The wizard listens on `http://localhost:7700` by default. It walks you through:
 6. **Bundle options** — include source files, redact secrets, schedule
 7. **Review** — what will happen, then run
 
-After submit, the wizard either mounts the live UI at `/app` (live mode) or runs the export inline (export mode) and shows you the result.
+After submit, the wizard either mounts the live UI at `/app` (live mode) or runs the export inline (export mode) and shows you the result. In live mode, codenanny automatically watches the source directory for new or updated `.jsonl` transcripts and re-ingests them in the background; pass `--watch=false` to `codenanny serve` or `codenanny wizard` if you want to disable this.
 
 The wizard writes `codenanny.config.json` to your current working directory so you can re-run with the same settings.
 

@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { join, resolve, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { createHost } from 'plugkit';
-import codenanny, { ingestAll } from 'codenanny';
+import codenanny, { ingestAll, startWatch } from 'codenanny';
 
 function resolvePath(p, fallback) {
   if (!p) return fallback;
@@ -46,10 +46,22 @@ export async function startServer(args) {
     }
   }
 
+  let watcher = null;
+  if (args.watch !== 'false') {
+    watcher = startWatch(db, srcPath, {
+      onIngest: ({ sessionId }) =>
+        host.events.emit('codenanny:session:updated', { id: sessionId, source: 'watch' }),
+    });
+    console.log(`[codenanny] watching ${srcPath} for transcript changes`);
+    const stop = () => watcher.stop();
+    process.on('SIGTERM', stop);
+    process.on('SIGINT', stop);
+  }
+
   return new Promise((resolve_) => {
     const server = app.listen(port, () => {
       console.log(`[codenanny] live at http://localhost:${port}`);
-      resolve_({ server, db, host, port });
+      resolve_({ server, db, host, port, watcher });
     });
   });
 }

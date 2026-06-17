@@ -62,6 +62,7 @@ See [docs/INSTALL.md](docs/INSTALL.md) for prerequisites and troubleshooting.
 - **Static bundle** is self-contained: opens in any browser, fully offline-searchable
 - **HTTP API** for embedding codenanny data in your own tools
 - **Library API** for embedding codenanny *itself* in your own Node app
+- **Watch mode** — live mode auto-re-ingests when new transcripts land in the source dir (chokidar; disable with --watch=false)
 - **plugkit modules** — extend the host with your own sqlite-backed, router-backed modules
 
 ## Contributing

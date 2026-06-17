@@ -5,6 +5,7 @@ import { defineModule } from 'plugkit';
 import { createApi } from './src/api.js';
 import { createRouter } from './src/router.js';
 import { ingestAll, findTranscripts, parseTranscript, indexSession } from './src/ingest.js';
+import { startWatch } from './src/watch.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCHEMA = readFileSync(join(__dirname, 'src/schema.sql'), 'utf8');
@@ -28,5 +29,5 @@ export function codenanny(opts = {}) {
   });
 }
 
-export { ingestAll, findTranscripts, parseTranscript, indexSession, createApi, createRouter };
+export { ingestAll, findTranscripts, parseTranscript, indexSession, startWatch, createApi, createRouter };
 export default codenanny;
