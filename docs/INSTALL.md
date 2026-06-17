@@ -72,6 +72,19 @@ npm install
 
 Re-ingestion is idempotent; existing sessions are updated in place rather than duplicated.
 
+## Running in production
+
+The quickstart above is fine for "run it on my laptop." For a long-running deployment — codenanny on a private box, reachable from the public internet only through *your* dashboard's login — the canonical recipe lives in [`deploy/`](../deploy/):
+
+| File | What it covers |
+|---|---|
+| [`deploy/README.md`](../deploy/README.md) | Topology, wire-up steps, reboot test, troubleshooting |
+| [`deploy/pm2-ecosystem.config.cjs.example`](../deploy/pm2-ecosystem.config.cjs.example) | PM2 process supervision + boot persistence |
+| [`deploy/codenanny-tunnel.service.example`](../deploy/codenanny-tunnel.service.example) | Reverse SSH tunnel under systemd (autossh) |
+| [`deploy/nginx-auth-snippet.conf.example`](../deploy/nginx-auth-snippet.conf.example) | nginx `auth_request` gate + SSE-safe proxy block |
+
+Short version of the shape: codenanny binds to `127.0.0.1`, autossh forwards that port to a public host, nginx on the public host proxies `/codenanny/` to it behind an `auth_request` check against your existing session cookie. The private box never opens an internet-facing port; the public host never holds codenanny data.
+
 ## Uninstall
 
 `codenanny` doesn't install anything to your system. Just delete the checkout and the database file:
@@ -97,4 +110,5 @@ rm -f /wherever/codenanny.db /wherever/codenanny.config.json
       proxy_set_header   Connection '';
   }
   ```
+  For a full proxy block that also handles auth and the non-SSE routes, see [`deploy/nginx-auth-snippet.conf.example`](../deploy/nginx-auth-snippet.conf.example).
 - **Picker shows no folders** — confirm the OAuth scope was `drive.file` (default) OR `drive.readonly` (broader). The picker only sees folders codenanny has access to via the granted scope. If you previously authorized with a narrower scope, revoke access at https://myaccount.google.com/permissions and re-connect to get a fresh token with the correct scope.

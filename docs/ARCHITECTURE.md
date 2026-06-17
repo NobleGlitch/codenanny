@@ -149,6 +149,16 @@ That's the whole surface. Adapters do not see the database, do not see the coden
 
 Adding a new adapter is one file. See [ADAPTERS.md](ADAPTERS.md).
 
+## Deployment shapes
+
+codenanny is one process binding to one port — that's the whole deployment surface. The only architectural choice is where you put the auth boundary.
+
+- **Local-only (laptop, dev VM).** `npm run wizard`, open `http://localhost:7700`. No gateway, no auth. The OS is the trust boundary.
+- **Single-host VPS.** Run codenanny on `127.0.0.1`, front with a reverse proxy that handles TLS + auth on the same box. Same machine holds data and the public endpoint.
+- **Split (private box + public gateway).** codenanny on a private host bound to `127.0.0.1`; a reverse SSH tunnel forwards that port to a public host; nginx on the public host gates `/codenanny/` behind `auth_request`. The private box never opens a public port. This is the recipe in [`deploy/`](../deploy/) — proven in prod, fully templated.
+
+The codenanny process is identical in all three; what changes is the transport and the auth boundary around it. There is no "production build" — the wizard and `serve` command are the same code path used in every shape.
+
 ## What is NOT in here
 
 - No build step. Plain JS on Node 20+.
