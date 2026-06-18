@@ -144,6 +144,22 @@ async function loadSessions() {
   }
 }
 
+const FILE_OP_META = {
+  write:        { icon: '✏️',  cat: 'write', label: 'wrote' },
+  edit:         { icon: '📝',  cat: 'write', label: 'edited' },
+  multiedit:    { icon: '📝',  cat: 'write', label: 'edited' },
+  notebookedit: { icon: '📓',  cat: 'write', label: 'notebook' },
+  read:         { icon: '👁️',  cat: 'read',  label: 'read' },
+  'bash-write': { icon: '$→',  cat: 'bash',  label: 'bash wrote' },
+  'bash-append':{ icon: '$»',  cat: 'bash',  label: 'bash appended' },
+  'bash-mkdir': { icon: '📁',  cat: 'bash',  label: 'mkdir' },
+  'bash-touch': { icon: '👆',  cat: 'bash',  label: 'touched' },
+  'bash-copy':  { icon: '⎘',  cat: 'bash',  label: 'cp →' },
+  'bash-move':  { icon: '↪',  cat: 'bash',  label: 'mv →' },
+};
+
+let _timelineState = null; // { items, filters }
+
 async function openSession(id) {
   await refreshProjectsCache();
   const r = await fetch(`${BASE}/sessions/${encodeURIComponent(id)}`);
@@ -152,6 +168,15 @@ async function openSession(id) {
     return;
   }
   const { session, prompts, files } = await r.json();
+
+  const items = buildTimeline(prompts, files);
+  const counts = countByCategory(items);
+  _timelineState = {
+    sessionId: session.id,
+    items,
+    filters: { prompts: true, writes: true, reads: true, bash: true },
+  };
+
   document.getElementById('detail').innerHTML = `
     <div class="session-header">
       <div class="title-row">
@@ -161,31 +186,88 @@ async function openSession(id) {
       </div>
       <div class="meta">${esc(session.project_id || 'no project')} · ${formatTs(session.started_at)} → ${formatTs(session.ended_at)}</div>
     </div>
-    <div class="tabs">
-      <button class="tab active" data-tab="prompts">Prompts (${prompts.length})</button>
-      <button class="tab" data-tab="files">Files (${files.length})</button>
+    <div class="timeline-filters">
+      <label><input type="checkbox" data-filter="prompts" checked> Prompts <span class="filter-count">${counts.prompts}</span></label>
+      <label><input type="checkbox" data-filter="writes" checked> Writes <span class="filter-count">${counts.writes}</span></label>
+      <label><input type="checkbox" data-filter="reads" checked> Reads <span class="filter-count">${counts.reads}</span></label>
+      <label><input type="checkbox" data-filter="bash" checked> Bash <span class="filter-count">${counts.bash}</span></label>
     </div>
-    <div class="tab-content" id="prompts-pane">
-      ${prompts.map((p) => `
-        <div class="prompt ${esc(p.role)}">
-          <div class="role">${esc(p.role)} <span class="ts">${formatTs(p.ts)}</span></div>
-          <div class="text">${esc(p.text).replace(/\n/g, '<br>')}</div>
-        </div>
-      `).join('')}
-    </div>
-    <div class="tab-content hidden" id="files-pane">
-      ${files.map((f) => `
-        <div class="file">
-          <div class="action">${esc(f.action)}</div>
-          <div class="path">${esc(f.path)}</div>
-          <div class="ts">${formatTs(f.ts)}</div>
-        </div>
-      `).join('')}
-    </div>
+    <div id="timeline"></div>
   `;
-  document.querySelectorAll('.tab').forEach((t) => (t.onclick = () => switchTab(t.dataset.tab)));
+
+  renderTimeline();
+
+  document.querySelectorAll('.timeline-filters input').forEach((cb) => {
+    cb.addEventListener('change', (e) => {
+      _timelineState.filters[e.target.dataset.filter] = e.target.checked;
+      renderTimeline();
+    });
+  });
   document.getElementById('edit-session').onclick = () => showEditForm(session);
   document.getElementById('resume-session').onclick = (e) => copyResume(session.id, e.currentTarget);
+}
+
+function buildTimeline(prompts, files) {
+  const items = [];
+  for (const p of prompts) {
+    items.push({ kind: 'prompt', ts: p.ts ?? 0, role: p.role, text: p.text });
+  }
+  for (const f of files) {
+    const meta = FILE_OP_META[f.action] || { icon: '•', cat: 'write', label: f.action };
+    items.push({
+      kind: 'file',
+      ts: f.ts ?? 0,
+      cat: meta.cat,
+      action: f.action,
+      icon: meta.icon,
+      label: meta.label,
+      path: f.path,
+      turn_uuid: f.turn_uuid || null,
+    });
+  }
+  items.sort((a, b) => (a.ts - b.ts) || (a.kind === 'prompt' ? -1 : 1));
+  return items;
+}
+
+function countByCategory(items) {
+  const c = { prompts: 0, writes: 0, reads: 0, bash: 0 };
+  for (const it of items) {
+    if (it.kind === 'prompt') c.prompts += 1;
+    else if (it.cat === 'read') c.reads += 1;
+    else if (it.cat === 'bash') c.bash += 1;
+    else c.writes += 1;
+  }
+  return c;
+}
+
+function shouldShow(item, filters) {
+  if (item.kind === 'prompt') return filters.prompts;
+  if (item.cat === 'read')    return filters.reads;
+  if (item.cat === 'bash')    return filters.bash;
+  return filters.writes;
+}
+
+function renderTimeline() {
+  const { items, filters } = _timelineState;
+  const target = document.getElementById('timeline');
+  if (!target) return;
+  const html = items.filter((it) => shouldShow(it, filters)).map((it) => {
+    if (it.kind === 'prompt') {
+      return `
+        <div class="prompt ${esc(it.role)}">
+          <div class="role">${esc(it.role)} <span class="ts">${formatTs(it.ts)}</span></div>
+          <div class="text">${esc(it.text).replace(/\n/g, '<br>')}</div>
+        </div>`;
+    }
+    return `
+      <div class="timeline-file ${esc(it.cat)}">
+        <span class="tf-icon">${esc(it.icon)}</span>
+        <span class="tf-label">${esc(it.label)}</span>
+        <span class="tf-path">${esc(it.path)}</span>
+        <span class="tf-ts">${formatTs(it.ts)}</span>
+      </div>`;
+  }).join('');
+  target.innerHTML = html || `<div class="empty">No events match the current filters.</div>`;
 }
 
 async function copyResume(sessionId, btn) {
@@ -226,11 +308,6 @@ function flashButton(btn, message, original) {
     btn.classList.remove('btn-flash');
     btn.disabled = false;
   }, 1500);
-}
-
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.tab === name));
-  document.querySelectorAll('.tab-content').forEach((p) => p.classList.toggle('hidden', p.id !== `${name}-pane`));
 }
 
 function showEditForm(session) {

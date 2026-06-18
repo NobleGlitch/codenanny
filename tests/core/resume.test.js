@@ -77,13 +77,16 @@ test('resumeBundle surfaces last assistant text when one exists', async () => {
   }
 });
 
-test('resumeBundle includes recently touched files in formatted output', async () => {
+test('resumeBundle splits files into created/edited vs read sections', async () => {
   const { db, api } = await seed();
   const sid = pickSessionId(db);
 
   const bundle = resumeBundle(api, sid);
   if (bundle.touchedFiles.length) {
-    assert.ok(bundle.formatted.includes('## Recently touched files'));
+    const hasWrites = bundle.touchedFiles.some((f) => f.action !== 'read');
+    const hasReads  = bundle.touchedFiles.some((f) => f.action === 'read');
+    if (hasWrites) assert.ok(bundle.formatted.includes('## Files created or edited'));
+    if (hasReads)  assert.ok(bundle.formatted.includes('## Files read for context'));
     assert.ok(bundle.formatted.includes(bundle.touchedFiles[0].path));
   }
 });

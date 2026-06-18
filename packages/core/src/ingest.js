@@ -2,8 +2,9 @@ import { readFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join, basename, extname } from 'node:path';
 import { createHash } from 'node:crypto';
+import { extractBashFiles } from './bash-files.js';
 
-const FILE_TOOL_NAMES = new Set(['Write', 'Edit', 'NotebookEdit', 'MultiEdit']);
+const WRITE_TOOL_NAMES = new Set(['Write', 'Edit', 'NotebookEdit', 'MultiEdit']);
 
 export async function findTranscripts(rootDir) {
   const entries = await readdir(rootDir, { withFileTypes: true });
@@ -75,17 +76,42 @@ export function parseTranscript(filePath) {
     } else if (ev.type === 'assistant') {
       const msg = ev.message || {};
       const content = msg.content || [];
+      const turn_uuid = ev.uuid || null;
       for (const c of content) {
-        if (c.type === 'tool_use' && FILE_TOOL_NAMES.has(c.name)) {
+        if (c.type === 'tool_use') {
           const input = c.input || {};
-          const path = input.file_path || input.notebook_path;
-          if (path) {
-            files.push({
-              ts,
-              path,
-              action: c.name.toLowerCase(),
-              content_hash: hashOfInput(input),
-            });
+          if (WRITE_TOOL_NAMES.has(c.name)) {
+            const path = input.file_path || input.notebook_path;
+            if (path) {
+              files.push({
+                ts,
+                turn_uuid,
+                path,
+                action: c.name.toLowerCase(),
+                content_hash: hashOfInput(input),
+              });
+            }
+          } else if (c.name === 'Read') {
+            const path = input.file_path || input.notebook_path;
+            if (path) {
+              files.push({
+                ts,
+                turn_uuid,
+                path,
+                action: 'read',
+                content_hash: null,
+              });
+            }
+          } else if (c.name === 'Bash') {
+            for (const hit of extractBashFiles(input.command)) {
+              files.push({
+                ts,
+                turn_uuid,
+                path: hit.path,
+                action: hit.action,
+                content_hash: null,
+              });
+            }
           }
         } else if (c.type === 'text' && c.text) {
           prompts.push({ ts, role: 'assistant', text: c.text });
@@ -123,9 +149,12 @@ export function indexSession(db, projectId, parsed) {
 
   db.prepare(`DELETE FROM session_files WHERE session_id = ?`).run(parsed.id);
   const insertFile = db.prepare(`
-    INSERT INTO session_files(session_id, path, action, content_hash, ts) VALUES (?, ?, ?, ?, ?)
+    INSERT INTO session_files(session_id, path, action, content_hash, ts, turn_uuid)
+    VALUES (?, ?, ?, ?, ?, ?)
   `);
-  for (const f of parsed.files) insertFile.run(parsed.id, f.path, f.action, f.content_hash, f.ts);
+  for (const f of parsed.files) {
+    insertFile.run(parsed.id, f.path, f.action, f.content_hash, f.ts, f.turn_uuid || null);
+  }
 }
 
 export async function ingestAll(db, rootDir, { onProgress } = {}) {

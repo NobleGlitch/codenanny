@@ -17,10 +17,12 @@ CREATE TABLE IF NOT EXISTS session_files (
   action TEXT,
   content_hash TEXT,
   ts INTEGER,
+  turn_uuid TEXT,
   FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_files_session ON session_files(session_id);
 CREATE INDEX IF NOT EXISTS idx_files_path ON session_files(path);
+CREATE INDEX IF NOT EXISTS idx_files_turn ON session_files(turn_uuid);
 
 CREATE TABLE IF NOT EXISTS session_prompts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -12,6 +12,10 @@ const DEFAULT_TURNS = 6;
 const DEFAULT_FILE_WINDOW_MS = 30 * 60 * 1000;
 const DEFAULT_MAX_TURN_CHARS = 4000;
 
+function isRead(action) {
+  return action === 'read';
+}
+
 function relativeTime(tsMs, nowMs = Date.now()) {
   if (!tsMs) return 'unknown';
   const diff = Math.max(0, nowMs - tsMs);
@@ -119,11 +123,21 @@ function formatBundle({ session, trailing, touchedFiles, endTs, nowMs, maxTurnCh
     out.push(`**Session title:** ${session.title}`);
   }
 
-  if (touchedFiles.length) {
+  const writes = touchedFiles.filter((f) => !isRead(f.action));
+  const reads = touchedFiles.filter((f) => isRead(f.action));
+
+  if (writes.length) {
     out.push('');
-    out.push('## Recently touched files');
-    for (const f of touchedFiles) {
+    out.push('## Files created or edited');
+    for (const f of writes) {
       out.push(`- \`${f.path}\` — ${f.action} (${relativeTime(f.ts, nowMs)})`);
+    }
+  }
+  if (reads.length) {
+    out.push('');
+    out.push('## Files read for context');
+    for (const f of reads) {
+      out.push(`- \`${f.path}\` (${relativeTime(f.ts, nowMs)})`);
     }
   }
 

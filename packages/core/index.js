@@ -7,6 +7,7 @@ import { createRouter } from './src/router.js';
 import { ingestAll, findTranscripts, parseTranscript, indexSession } from './src/ingest.js';
 import { startWatch } from './src/watch.js';
 import { resumeBundle } from './src/resume.js';
+import { migrateSchema } from './src/migrate.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SCHEMA = readFileSync(join(__dirname, 'src/schema.sql'), 'utf8');
@@ -17,6 +18,7 @@ export function codenanny(opts = {}) {
     mountPath: opts.mountPath || '/codenanny',
     schema: { migrations: [SCHEMA] },
     router: ({ db, events, logger }) => {
+      migrateSchema(db);
       const api = createApi(db);
       events.emit?.('codenanny:ready', { stats: api.stats() });
       return createRouter({ api, db, events, logger });
