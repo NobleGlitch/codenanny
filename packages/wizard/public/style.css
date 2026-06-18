@@ -63,3 +63,57 @@ pre {
   overflow: auto;
   font-size: 12px;
 }
+
+.snippet {
+  margin: 18px 0;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0d1117;
+}
+.snippet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #161b22;
+  border-bottom: 1px solid #30363d;
+}
+.snippet-label {
+  font-size: 12px;
+  color: #c9d1d9;
+  font-family: ui-monospace, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  margin-right: 12px;
+}
+.snippet-copy {
+  padding: 4px 10px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.snippet-code {
+  margin: 0;
+  padding: 14px;
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #e6e6e6;
+  background: #0d1117;
+  border: none;
+  border-radius: 0;
+}
+.snippet-code.lang-bash { color: #c9d1d9; }
+.snippet-code.lang-js   { color: #e6e6e6; }
+.snippet-code.lang-ini  { color: #d2a8ff; }
+.snippet-code.lang-nginx { color: #79c0ff; }
+.hint code {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  background: #21262d;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.hint a { color: #58a6ff; }

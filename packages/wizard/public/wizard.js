@@ -1,8 +1,23 @@
 const steps = [
   {
+    id: 'scenario',
+    title: 'How will you run codenanny?',
+    hint: 'This shapes the questions below. You can change it later by re-running the wizard.',
+    fields: [{
+      name: 'scenario',
+      type: 'radio',
+      options: [
+        { value: 'solo',     label: 'Just me, on my laptop — most users pick this' },
+        { value: 'server',   label: 'Self-hosted on a server — I want my team or my other devices to reach it' },
+        { value: 'embedded', label: 'Embedded inside my own Express app — I want codenanny as a plugkit module' },
+      ],
+    }],
+  },
+  {
     id: 'mode',
     title: 'How do you want to run codenanny?',
     hint: 'Live mode keeps a server running and serves the UI. Export mode runs once and ships a static bundle to a destination.',
+    showIf: (s) => s.scenario === 'solo',
     fields: [{
       name: 'mode',
       type: 'radio',
@@ -16,12 +31,29 @@ const steps = [
     id: 'source',
     title: 'Where are your Claude Code transcripts?',
     hint: 'codenanny reads JSONL transcripts from this directory. The default works on most setups.',
+    showIf: (s) => s.scenario !== 'embedded',
     fields: [{ name: 'source', type: 'text', placeholder: '~/.claude/projects', default: '~/.claude/projects' }],
   },
+  // ── server-scenario branch ────────────────────────────────────────────────
+  {
+    id: 'server-config',
+    title: 'Server config',
+    hint: 'Codenanny will bind to 127.0.0.1 and sit behind a reverse proxy. Fill in what you know — placeholders stay for what you don\'t.',
+    showIf: (s) => s.scenario === 'server',
+    fields: [
+      { name: 'server_port',           type: 'text', placeholder: '7700', default: '7700' },
+      { name: 'public_host',           type: 'text', placeholder: 'your.example.com' },
+      { name: 'base_path',             type: 'text', placeholder: '/codenanny', default: '/codenanny' },
+      { name: 'install_dir',           type: 'text', placeholder: '/opt/codenanny', default: '/opt/codenanny' },
+      { name: 'db_path',               type: 'text', placeholder: '/var/lib/codenanny/codenanny.db', default: '/var/lib/codenanny/codenanny.db' },
+      { name: 'src_path',              type: 'text', placeholder: '/root/.claude/projects', default: '/root/.claude/projects' },
+    ],
+  },
+  // ── solo-export branch ────────────────────────────────────────────────────
   {
     id: 'destination',
     title: 'Where should the export go?',
-    showIf: (s) => s.mode === 'export',
+    showIf: (s) => s.scenario === 'solo' && s.mode === 'export',
     fields: [{
       name: 'destination_type',
       type: 'radio',
@@ -36,13 +68,13 @@ const steps = [
   {
     id: 'local-path',
     title: 'Local destination path',
-    showIf: (s) => s.mode === 'export' && s.destination_type === 'local',
+    showIf: (s) => s.scenario === 'solo' && s.mode === 'export' && s.destination_type === 'local',
     fields: [{ name: 'path', type: 'text', placeholder: './codenanny-export', default: './codenanny-export' }],
   },
   {
     id: 'credentials',
     title: 'Connection details',
-    showIf: (s) => s.mode === 'export' && s.destination_type && s.destination_type !== 'local',
+    showIf: (s) => s.scenario === 'solo' && s.mode === 'export' && s.destination_type && s.destination_type !== 'local',
     hint: 'For Google Drive: host=client_id, user=client_secret, auth=refresh_token, path=folder_id. ' +
           'For SCP: host, user, auth (password or PEM key), path. ' +
           'See the @codenanny/adapters README for full instructions.',
@@ -57,6 +89,7 @@ const steps = [
   {
     id: 'options',
     title: 'Bundle options',
+    showIf: (s) => s.scenario === 'solo' && s.mode === 'export',
     fields: [
       { name: 'include_source_files', type: 'checkbox', label: 'Include the source files (not just the index)' },
       { name: 'redact_secrets', type: 'checkbox', label: 'Redact obvious secrets (API keys, passwords)' },
@@ -72,7 +105,10 @@ const steps = [
       },
     ],
   },
-  { id: 'review', title: 'Review and start', review: true },
+  // ── reviews ──────────────────────────────────────────────────────────────
+  { id: 'review-server',   title: 'Deployment snippets',     showIf: (s) => s.scenario === 'server',   review: 'server' },
+  { id: 'review-embedded', title: 'Embed codenanny',          showIf: (s) => s.scenario === 'embedded', review: 'embedded' },
+  { id: 'review',          title: 'Review and start',         showIf: (s) => s.scenario === 'solo',     review: 'solo' },
 ];
 
 const state = {};
@@ -111,7 +147,11 @@ function render() {
     card.appendChild(hint);
   }
 
-  if (step.review) {
+  if (step.review === 'embedded') {
+    renderEmbeddedReview(card);
+  } else if (step.review === 'server') {
+    renderServerReview(card);
+  } else if (step.review) {
     const pre = document.createElement('pre');
     pre.textContent = JSON.stringify(state, null, 2);
     card.appendChild(pre);
@@ -155,13 +195,15 @@ function render() {
     back.onclick = () => { stepIdx = Math.max(0, stepIdx - 1); render(); };
     nav.appendChild(back);
   }
-  if (step.review) {
+  if (step.review === 'solo') {
     const start = document.createElement('button');
     start.className = 'btn primary';
     start.textContent = 'Start';
     start.onclick = submit;
     nav.appendChild(start);
   }
+  // server and embedded reviews are documentation-only — no submit
+  // button. The user copies what they need and exits.
   card.appendChild(nav);
 
   const progress = document.createElement('div');
@@ -495,6 +537,240 @@ function mountFolderPicker(container, pathInput) {
   if (pathInput) pathInput.style.display = 'none';
 
   renderPicker();
+}
+
+// ---------------------------------------------------------------------------
+// Embedded-scenario review: show how to mount codenanny inside the user's
+// own Express app via plugkit. No code generation, just the canonical
+// snippet straight from the @codenanny/core README.
+// ---------------------------------------------------------------------------
+function renderEmbeddedReview(card) {
+  const intro = document.createElement('p');
+  intro.className = 'hint';
+  intro.textContent =
+    'Codenanny is a plugkit module. Install the core library + plugkit, mount the module on any path inside your existing Express + better-sqlite3 app, and it brings its router, sqlite schema, event bus subscriptions, and nav contribution with it.';
+  card.appendChild(intro);
+
+  appendSnippet(card, 'Install', 'bash', [
+    'npm install @codenanny/core @codenanny/plugkit @codenanny/ui',
+    'npm install express better-sqlite3',
+  ].join('\n'));
+
+  appendSnippet(card, 'Mount in your app', 'js', [
+    "import express from 'express';",
+    "import Database from 'better-sqlite3';",
+    "import { createHost } from '@codenanny/plugkit';",
+    "import codenanny from '@codenanny/core';",
+    "import { publicDir as codenannyUI } from '@codenanny/ui';",
+    '',
+    "const app = express();",
+    "const db = new Database('./codenanny.db');",
+    "const host = createHost({ app, db });",
+    '',
+    "// Mount codenanny under /sessions (or any path you like).",
+    "host.register(codenanny({ mountPath: '/sessions' }));",
+    '',
+    "// Serve the codenanny UI shell at the same path.",
+    "app.use('/sessions', express.static(codenannyUI));",
+    '',
+    "app.listen(3000, () => console.log('app live at :3000'));",
+  ].join('\n'));
+
+  const docs = document.createElement('p');
+  docs.className = 'hint';
+  docs.innerHTML =
+    'Full integration docs in <a href="https://www.npmjs.com/package/@codenanny/core" target="_blank" rel="noopener">@codenanny/core</a> and <a href="https://www.npmjs.com/package/@codenanny/plugkit" target="_blank" rel="noopener">@codenanny/plugkit</a> READMEs. Codenanny ships its own sqlite schema migrations on register — your host db gets new tables but no existing ones touched.';
+  card.appendChild(docs);
+}
+
+// ---------------------------------------------------------------------------
+// Server-scenario review: render the three deploy/ recipe files with the
+// user's inputs baked in. Placeholders the user didn't fill (SSH key path,
+// auth backend port, login redirect URL) stay as {{TOKENS}} for them to
+// edit by hand.
+// ---------------------------------------------------------------------------
+function renderServerReview(card) {
+  const intro = document.createElement('p');
+  intro.className = 'hint';
+  intro.textContent =
+    'Codenanny on a server should bind to 127.0.0.1, run under PM2 with systemd boot persistence, and only be reachable through a reverse proxy with an auth gate in front of it. These three files implement that. Copy each into the indicated path, fill remaining placeholders, then restart the services.';
+  card.appendChild(intro);
+
+  const cfg = {
+    port:         state.server_port || '7700',
+    public_host:  state.public_host || 'your.example.com',
+    base_path:    state.base_path   || '/codenanny',
+    install_dir:  state.install_dir || '/opt/codenanny',
+    db_path:      state.db_path     || '/var/lib/codenanny/codenanny.db',
+    src_path:     state.src_path    || '/root/.claude/projects',
+  };
+
+  appendSnippet(card,
+    `Save to ${cfg.install_dir}/ecosystem.config.cjs`,
+    'js',
+    renderPm2Snippet(cfg));
+
+  appendSnippet(card,
+    'Save to /etc/systemd/system/codenanny-tunnel.service',
+    'ini',
+    renderTunnelSnippet(cfg));
+
+  appendSnippet(card,
+    'Paste inside your nginx server { } block on the public host',
+    'nginx',
+    renderNginxSnippet(cfg));
+
+  const cmds = document.createElement('p');
+  cmds.className = 'hint';
+  cmds.innerHTML =
+    'Then on the private box: <code>pm2 start ' + esc(cfg.install_dir) + '/ecosystem.config.cjs && pm2 save && pm2 startup systemd</code>. ' +
+    'On the public host: <code>sudo systemctl daemon-reload && sudo systemctl enable --now codenanny-tunnel && sudo nginx -t && sudo systemctl reload nginx</code>. ' +
+    'Full walkthrough + troubleshooting in <a href="https://github.com/NobleGlitch/codenanny/blob/main/deploy/README.md" target="_blank" rel="noopener">deploy/README.md</a>.';
+  card.appendChild(cmds);
+}
+
+function renderPm2Snippet(cfg) {
+  return `module.exports = {
+  apps: [
+    {
+      name: 'codenanny',
+      cwd: '${cfg.install_dir}',
+      script: 'node_modules/codenanny/bin/codenanny.js',
+      args: [
+        'serve',
+        '--port', '${cfg.port}',
+        '--db',   '${cfg.db_path}',
+        '--src',  '${cfg.src_path}',
+      ],
+      env: {
+        NODE_ENV: 'production',
+        HOST:     '127.0.0.1',
+      },
+      autorestart: true,
+      max_restarts: 10,
+      restart_delay: 2000,
+      out_file:   '/var/log/codenanny/out.log',
+      error_file: '/var/log/codenanny/err.log',
+      merge_logs: true,
+      time:       true,
+    },
+  ],
+};`;
+}
+
+function renderTunnelSnippet(cfg) {
+  return `[Unit]
+Description=Reverse SSH tunnel for codenanny (${cfg.public_host} <- this box)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Environment=AUTOSSH_GATETIME=0
+Environment=AUTOSSH_POLL=60
+ExecStart=/usr/bin/autossh -M 0 -N \\
+  -o ServerAliveInterval=30 \\
+  -o ServerAliveCountMax=3 \\
+  -o ExitOnForwardFailure=yes \\
+  -o StrictHostKeyChecking=accept-new \\
+  -i {{SSH_KEY_PATH}} \\
+  -p {{PUBLIC_HOST_SSH_PORT}} \\
+  -R 127.0.0.1:${cfg.port}:127.0.0.1:${cfg.port} \\
+  {{PUBLIC_HOST_USER}}@${cfg.public_host}
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+# ── placeholders to fill in ──
+# {{SSH_KEY_PATH}}          path to private key, e.g. /root/.ssh/id_ed25519_codenanny
+# {{PUBLIC_HOST_SSH_PORT}}  ssh port on ${cfg.public_host} (usually 22)
+# {{PUBLIC_HOST_USER}}      user on ${cfg.public_host} that owns the reverse forward`;
+}
+
+function renderNginxSnippet(cfg) {
+  const bp = cfg.base_path.replace(/\/$/, '');
+  return `# ── auth check (internal) ──
+location = /auth/_codenanny_check {
+    internal;
+    proxy_pass              http://127.0.0.1:{{AUTH_BACKEND_PORT}}/auth/check;
+    proxy_pass_request_body off;
+    proxy_set_header        Content-Length "";
+    proxy_set_header        X-Original-URI $request_uri;
+    proxy_set_header        Cookie $http_cookie;
+}
+
+# ── codenanny (public, gated) ──
+location ${bp}/ {
+    auth_request     /auth/_codenanny_check;
+    error_page 401 = @codenanny_unauth;
+
+    rewrite ^${bp}/(.*)$ /$1 break;
+    rewrite ^${bp}$ / break;
+
+    proxy_pass         http://127.0.0.1:${cfg.port};
+    proxy_http_version 1.1;
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Real-IP         $remote_addr;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_set_header   X-Forwarded-Prefix ${bp};
+
+    # Server-Sent Events for live UI updates
+    proxy_buffering    off;
+    proxy_cache        off;
+    proxy_read_timeout 1h;
+    proxy_set_header   Connection "";
+}
+
+location @codenanny_unauth {
+    return 302 {{LOGIN_REDIRECT_URL}};
+}
+
+# ── placeholders to fill in ──
+# {{AUTH_BACKEND_PORT}}   port of your auth backend's /auth/check endpoint
+# {{LOGIN_REDIRECT_URL}}  where unauth users land, e.g. https://${cfg.public_host}/`;
+}
+
+// ---------------------------------------------------------------------------
+// Snippet block with a Copy button. Used by both review screens.
+// ---------------------------------------------------------------------------
+function appendSnippet(parent, label, lang, body) {
+  const wrap = document.createElement('div');
+  wrap.className = 'snippet';
+
+  const head = document.createElement('div');
+  head.className = 'snippet-head';
+  const labelEl = document.createElement('span');
+  labelEl.className = 'snippet-label';
+  labelEl.textContent = label;
+  head.appendChild(labelEl);
+
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.className = 'btn snippet-copy';
+  copy.textContent = 'Copy';
+  copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(body);
+      copy.textContent = '✓ Copied';
+      setTimeout(() => { copy.textContent = 'Copy'; }, 1500);
+    } catch {
+      copy.textContent = '✗ Failed';
+      setTimeout(() => { copy.textContent = 'Copy'; }, 1500);
+    }
+  });
+  head.appendChild(copy);
+  wrap.appendChild(head);
+
+  const pre = document.createElement('pre');
+  pre.className = `snippet-code lang-${lang}`;
+  pre.textContent = body;
+  wrap.appendChild(pre);
+
+  parent.appendChild(wrap);
 }
 
 function renderField(f) {
