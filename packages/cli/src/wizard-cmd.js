@@ -4,7 +4,7 @@ import { resolve, join, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import Database from 'better-sqlite3';
 import { startWizard as runWizard } from '@codenanny/wizard';
-import { createHost } from 'plugkit';
+import { createHost } from '@codenanny/plugkit';
 import codenanny, { ingestAll, startWatch, createApi } from '@codenanny/core';
 import { publicDir as uiPublic } from '@codenanny/ui';
 import { getAdapter } from '@codenanny/adapters';

@@ -9,7 +9,7 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "plugkit": "^0.4.0",
+    "@codenanny/plugkit": "^0.4.0",
     "@codenanny/core": "^0.4.0",
     "@codenanny/ui": "^0.4.0",
     "express": "^5.2.1",

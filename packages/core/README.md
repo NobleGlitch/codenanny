@@ -24,7 +24,7 @@ codenanny serve
 ```js
 import express from 'express';
 import Database from 'better-sqlite3';
-import { createHost } from 'plugkit';
+import { createHost } from '@codenanny/plugkit';
 import codenanny from '@codenanny/core';
 
 const app = express();

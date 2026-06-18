@@ -1,4 +1,4 @@
-# plugkit
+# @codenanny/plugkit
 
 > Tiny plugin contract for modular Express apps.
 
@@ -14,7 +14,7 @@ It's the substrate that **[codenanny](https://github.com/desertshibari-crypto/co
 ## Install
 
 ```bash
-npm install plugkit
+npm install @codenanny/plugkit
 ```
 
 ## Quickstart
@@ -22,7 +22,7 @@ npm install plugkit
 ```js
 import express from 'express';
 import Database from 'better-sqlite3';
-import { createHost, defineModule } from 'plugkit';
+import { createHost, defineModule } from '@codenanny/plugkit';
 
 const app = express();
 const db = new Database('app.db');

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { defineModule } from 'plugkit';
+import { defineModule } from '@codenanny/plugkit';
 import { createApi } from './src/api.js';
 import { createRouter } from './src/router.js';
 import { ingestAll, findTranscripts, parseTranscript, indexSession } from './src/ingest.js';

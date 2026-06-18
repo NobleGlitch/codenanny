@@ -1,7 +1,7 @@
 {
-  "name": "plugkit",
+  "name": "@codenanny/plugkit",
   "version": "0.4.0",
-  "description": "Tiny plugin contract for modular Express apps. Mount routers, share events, declare sqlite schemas, contribute to nav.",
+  "description": "Tiny plugin contract for modular Express apps. Mount routers, share events, declare sqlite schemas, contribute to nav. Used by codenanny.",
   "license": "MIT",
   "author": "desertshibari-crypto",
   "type": "module",
@@ -25,9 +25,11 @@
   "engines": {
     "node": ">=20"
   },
+  "homepage": "https://github.com/desertshibari-crypto/codenanny/tree/main/packages/plugkit#readme",
+  "bugs": "https://github.com/desertshibari-crypto/codenanny/issues",
   "repository": {
     "type": "git",
-    "url": "https://github.com/desertshibari-crypto/codenanny.git",
+    "url": "git+https://github.com/desertshibari-crypto/codenanny.git",
     "directory": "packages/plugkit"
   },
   "publishConfig": {

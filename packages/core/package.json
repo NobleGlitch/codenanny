@@ -29,7 +29,7 @@
     "node": ">=20"
   },
   "dependencies": {
-    "plugkit": "^0.4.0",
+    "@codenanny/plugkit": "^0.4.0",
     "express": "^5.2.1",
     "better-sqlite3": "^12.11.1",
     "chokidar": "^3.6.0"

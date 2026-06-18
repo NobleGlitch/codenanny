@@ -2,7 +2,7 @@ import express from 'express';
 import Database from 'better-sqlite3';
 import { join, resolve, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
-import { createHost } from 'plugkit';
+import { createHost } from '@codenanny/plugkit';
 import codenanny, { ingestAll, startWatch } from '@codenanny/core';
 import { loadConfig } from './config.js';
 
