@@ -22,6 +22,67 @@ export function createApi(db) {
           SELECT * FROM session_files WHERE session_id = ? ORDER BY ts ASC
         `).all(id);
       },
+      byPath(path, { mode = 'auto', limit = 50 } = {}) {
+        if (!path || typeof path !== 'string') return [];
+        const resolvedMode = mode === 'auto' ? (path.endsWith('/') ? 'prefix' : 'exact') : mode;
+        const sql = resolvedMode === 'prefix'
+          ? `SELECT f.session_id, f.path, f.action, f.ts
+             FROM session_files f
+             WHERE f.path LIKE ? ESCAPE '\\'`
+          : `SELECT f.session_id, f.path, f.action, f.ts
+             FROM session_files f
+             WHERE f.path = ?`;
+        const arg = resolvedMode === 'prefix'
+          ? path.replace(/[\\%_]/g, (c) => '\\' + c) + '%'
+          : path;
+        const rows = db.prepare(sql).all(arg);
+        if (!rows.length) return [];
+
+        const bySession = new Map();
+        for (const r of rows) {
+          let entry = bySession.get(r.session_id);
+          if (!entry) {
+            entry = {
+              session_id: r.session_id,
+              touch_count: 0,
+              last_touch_ts: 0,
+              action_counts: {},
+              sample_paths: new Set(),
+            };
+            bySession.set(r.session_id, entry);
+          }
+          entry.touch_count += 1;
+          if (r.ts && r.ts > entry.last_touch_ts) entry.last_touch_ts = r.ts;
+          entry.action_counts[r.action] = (entry.action_counts[r.action] || 0) + 1;
+          if (entry.sample_paths.size < 5) entry.sample_paths.add(r.path);
+        }
+
+        const sessionIds = [...bySession.keys()];
+        const placeholders = sessionIds.map(() => '?').join(',');
+        const sessionRows = db.prepare(
+          `SELECT id, title, project_id, started_at, ended_at FROM sessions WHERE id IN (${placeholders})`
+        ).all(...sessionIds);
+        const sessionMeta = new Map(sessionRows.map((s) => [s.id, s]));
+
+        const out = [];
+        for (const e of bySession.values()) {
+          const s = sessionMeta.get(e.session_id);
+          if (!s) continue;
+          out.push({
+            session_id: e.session_id,
+            title: s.title,
+            project_id: s.project_id,
+            started_at: s.started_at,
+            ended_at: s.ended_at,
+            touch_count: e.touch_count,
+            last_touch_ts: e.last_touch_ts,
+            action_counts: e.action_counts,
+            sample_paths: [...e.sample_paths],
+          });
+        }
+        out.sort((a, b) => (b.last_touch_ts || 0) - (a.last_touch_ts || 0));
+        return out.slice(0, Math.max(1, Math.min(limit, 500)));
+      },
     },
     files: {
       byProject(projectId) {

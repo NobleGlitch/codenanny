@@ -291,3 +291,85 @@ body { display: flex; background: #0e1116; color: #e6e6e6; }
 
 .error { color: #f85149; padding: 10px; }
 mark { background: #ffd33d40; color: #f0f0f0; padding: 0 2px; border-radius: 2px; }
+
+.find-form {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 20px;
+}
+.find-form input {
+  flex: 1;
+  padding: 10px 12px;
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  color: #e6e6e6;
+  font-size: 14px;
+  font-family: ui-monospace, monospace;
+}
+.find-form input:focus { outline: none; border-color: #1f6feb; }
+
+.find-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.find-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s;
+}
+.find-card:hover { background: #1c2128; border-color: #6e7681; }
+.fc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.fc-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e6e6e6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fc-age { font-size: 11px; color: #6e7681; flex-shrink: 0; }
+.fc-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  color: #8b949e;
+  margin-bottom: 8px;
+}
+.fc-proj {
+  background: #21262d;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  padding: 0 6px;
+}
+.fc-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.ac-chip {
+  font-size: 11px;
+  background: #1f2937;
+  border: 1px solid #30363d;
+  border-radius: 3px;
+  padding: 2px 6px;
+  color: #c9d1d9;
+}
+.fc-paths {
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  color: #8b949e;
+}
+.sample-path {
+  padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

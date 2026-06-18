@@ -85,6 +85,14 @@ export function createRouter({ api, db, events, logger = console }) {
     res.json(api.files.recent(limit));
   });
 
+  r.get('/api/files/by-path', (req, res) => {
+    const path = (req.query.path || '').toString().trim();
+    if (!path) return res.status(400).json({ error: 'path (string) required' });
+    const mode = ['exact', 'prefix', 'auto'].includes(req.query.mode) ? req.query.mode : 'auto';
+    const limit = Math.min(parseInt(req.query.limit) || 50, 500);
+    res.json(api.sessions.byPath(path, { mode, limit }));
+  });
+
   r.get('/api/media', (req, res) => {
     if (!db) return res.status(500).json({ error: 'codenanny: router not wired with db (host bug)' });
     const limit = Math.min(parseInt(req.query.limit) || 1000, 5000);

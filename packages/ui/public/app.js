@@ -448,6 +448,113 @@ async function runSearch(q) {
   }
 }
 
+// ---------- FIND view ----------
+
+const ACTION_ICONS = {
+  write:        '✏️',
+  edit:         '📝',
+  multiedit:    '📝',
+  notebookedit: '📓',
+  read:         '👁️',
+  'bash-write': '$→',
+  'bash-append':'$»',
+  'bash-mkdir': '📁',
+  'bash-touch': '👆',
+  'bash-copy':  '⎘',
+  'bash-move':  '↪',
+};
+
+function relativeAge(ts, now = Date.now()) {
+  if (!ts) return '';
+  const ms = typeof ts === 'number' && ts < 1e12 ? ts * 1000 : ts;
+  const s = Math.max(1, Math.floor((now - ms) / 1000));
+  if (s < 60)    return `${s}s ago`;
+  if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
+  return `${Math.floor(s / 86400)}d ago`;
+}
+
+function loadFindView() {
+  document.getElementById('list').innerHTML =
+    '<li class="hint">Paste a folder or file path on the right to find sessions that touched it.</li>';
+  document.getElementById('detail').innerHTML = `
+    <h2>Find sessions by file path</h2>
+    <p class="meta">
+      Paste an absolute path. Trailing <code>/</code> = prefix match (everything under this folder).
+      No trailing <code>/</code> = exact-file match.
+    </p>
+    <div class="find-form">
+      <input id="find-path" type="text" placeholder="/home/me/projects/old-thing/" autocomplete="off">
+      <button class="btn primary" id="find-go">Find</button>
+    </div>
+    <div id="find-results"><div class="empty">No search yet.</div></div>
+  `;
+  const input = document.getElementById('find-path');
+  const go = document.getElementById('find-go');
+  const submit = () => runFind(input.value.trim());
+  go.onclick = submit;
+  input.onkeydown = (e) => { if (e.key === 'Enter') submit(); };
+  input.focus();
+}
+
+async function runFind(path) {
+  const target = document.getElementById('find-results');
+  if (!path) {
+    target.innerHTML = '<div class="empty">Enter a path to search.</div>';
+    return;
+  }
+  target.innerHTML = '<div class="empty">Searching…</div>';
+  try {
+    const r = await fetch(`${BASE}/files/by-path?path=${encodeURIComponent(path)}`);
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      target.innerHTML = `<div class="error">${esc(err.error || 'Search failed')}</div>`;
+      return;
+    }
+    const hits = await r.json();
+    if (!hits.length) {
+      target.innerHTML = `<div class="empty">No sessions touched <code>${esc(path)}</code>.</div>`;
+      return;
+    }
+    const now = Date.now();
+    target.innerHTML = `
+      <p class="meta">${hits.length} session${hits.length === 1 ? '' : 's'} touched files at this path.</p>
+      <div class="find-cards">
+        ${hits.map((h) => renderFindCard(h, now)).join('')}
+      </div>
+    `;
+    target.querySelectorAll('.find-card').forEach((el) => {
+      el.onclick = () => openSession(el.dataset.session);
+    });
+  } catch (e) {
+    target.innerHTML = `<div class="error">${esc(e.message || 'Search failed')}</div>`;
+  }
+}
+
+function renderFindCard(hit, now) {
+  const actionChips = Object.entries(hit.action_counts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([action, n]) => `<span class="ac-chip">${ACTION_ICONS[action] || '•'} ${esc(action)} ×${n}</span>`)
+    .join(' ');
+  const samplePaths = hit.sample_paths
+    .map((p) => `<div class="sample-path">${esc(p)}</div>`)
+    .join('');
+  return `
+    <div class="find-card" data-session="${esc(hit.session_id)}">
+      <div class="fc-head">
+        <span class="fc-title">${esc(hit.title || '(untitled)')}</span>
+        <span class="fc-age">${relativeAge(hit.last_touch_ts, now)}</span>
+      </div>
+      <div class="fc-meta">
+        <span class="fc-proj">${esc(hit.project_id || 'no project')}</span>
+        <span class="fc-touches">${hit.touch_count} touch${hit.touch_count === 1 ? '' : 'es'}</span>
+      </div>
+      <div class="fc-actions">${actionChips}</div>
+      <div class="fc-paths">${samplePaths}</div>
+    </div>
+  `;
+}
+
 // ---------- VIEW SWITCH ----------
 
 function switchView(view) {
@@ -458,6 +565,7 @@ function switchView(view) {
   if (view === 'sessions') loadSessions();
   else if (view === 'media') loadMedia();
   else if (view === 'projects') loadProjectsView();
+  else if (view === 'find') loadFindView();
 }
 
 document.querySelectorAll('.nav-link').forEach((b) => {
