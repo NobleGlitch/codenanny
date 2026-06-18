@@ -14,5 +14,8 @@
     "src/",
     "public/",
     "README.md"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public"
+  }
 }

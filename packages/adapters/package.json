@@ -17,5 +17,8 @@
   "dependencies": {
     "basic-ftp": "^5.0.5",
     "ssh2-sftp-client": "^12.1.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
