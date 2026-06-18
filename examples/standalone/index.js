@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { createHost } from 'plugkit';
-import codenanny, { ingestAll } from 'codenanny';
+import codenanny, { ingestAll } from '@codenanny/core';
 import { publicDir as uiPublic } from '@codenanny/ui';
 
 const DB_PATH = process.env.CODENANNY_DB || './codenanny.db';

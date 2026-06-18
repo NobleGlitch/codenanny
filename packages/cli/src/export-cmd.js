@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { join, resolve, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
-import codenanny, { createApi, ingestAll } from 'codenanny';
+import codenanny, { createApi, ingestAll } from '@codenanny/core';
 import { getAdapter } from '@codenanny/adapters';
 import { loadConfig } from './config.js';
 

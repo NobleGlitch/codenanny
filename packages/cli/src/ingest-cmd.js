@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { join, resolve, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
-import codenanny, { ingestAll } from 'codenanny';
+import codenanny, { ingestAll } from '@codenanny/core';
 
 function resolvePath(p, fallback) {
   if (!p) return fallback;

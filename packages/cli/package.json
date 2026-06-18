@@ -1,7 +1,7 @@
 {
-  "name": "@codenanny/cli",
+  "name": "codenanny",
   "version": "0.4.0",
-  "description": "Command-line entry for codenanny: wizard, serve, ingest, export.",
+  "description": "Local index of every Claude Code session: searchable timeline, paste-ready resume bundles for disconnects, and a disk reconciler that answers \"which session built this folder?\". MIT, runs locally, no cloud.",
   "license": "MIT",
   "author": "desertshibari-crypto",
   "type": "module",
@@ -14,15 +14,39 @@
     "src/",
     "README.md"
   ],
+  "keywords": [
+    "claude-code",
+    "claude",
+    "anthropic",
+    "ai-coding",
+    "ai-assistant",
+    "session-recovery",
+    "resume",
+    "transcript",
+    "sqlite",
+    "fts5",
+    "developer-tools",
+    "cli"
+  ],
+  "homepage": "https://github.com/desertshibari-crypto/codenanny#readme",
+  "bugs": "https://github.com/desertshibari-crypto/codenanny/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/desertshibari-crypto/codenanny.git",
+    "directory": "packages/cli"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=20"
   },
   "dependencies": {
-    "codenanny": "^0.4.0",
-    "plugkit": "^0.4.0",
+    "@codenanny/core": "^0.4.0",
     "@codenanny/ui": "^0.4.0",
     "@codenanny/wizard": "^0.4.0",
     "@codenanny/adapters": "^0.4.0",
+    "plugkit": "^0.4.0",
     "express": "^5.2.1",
     "better-sqlite3": "^12.11.1"
   }

@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import { join, resolve, isAbsolute } from 'node:path';
 import { homedir } from 'node:os';
 import { writeSync } from 'node:fs';
-import codenanny, { ingestAll, createApi, resumeBundle } from 'codenanny';
+import codenanny, { ingestAll, createApi, resumeBundle } from '@codenanny/core';
 import { loadConfig } from './config.js';
 
 function resolvePath(p, fallback) {
