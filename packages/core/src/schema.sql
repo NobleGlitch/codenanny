@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS session_files (
   content_hash TEXT,
   ts INTEGER,
   turn_uuid TEXT,
+  body TEXT,
+  body_truncated INTEGER DEFAULT 0,
   FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_files_session ON session_files(session_id);

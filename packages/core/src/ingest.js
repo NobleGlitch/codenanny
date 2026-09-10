@@ -5,6 +5,37 @@ import { createHash } from 'node:crypto';
 import { extractBashFiles } from './bash-files.js';
 
 const WRITE_TOOL_NAMES = new Set(['Write', 'Edit', 'NotebookEdit', 'MultiEdit']);
+const BODY_MAX_BYTES = 65536;
+const MULTIEDIT_SEP = '\n---\n[multiedit boundary]\n---\n';
+
+/**
+ * Extract a file-body snapshot from a write-style tool_use input.
+ * Returns { body, body_truncated } where body may be null when not capturable.
+ */
+export function extractBody(toolName, input = {}) {
+  let raw = null;
+  if (toolName === 'Write') {
+    raw = typeof input.content === 'string'
+      ? input.content
+      : (typeof input.new_string === 'string' ? input.new_string : null);
+  } else if (toolName === 'Edit') {
+    raw = typeof input.new_string === 'string' ? input.new_string : null;
+  } else if (toolName === 'MultiEdit') {
+    if (Array.isArray(input.edits)) {
+      const parts = input.edits
+        .map((e) => (e && typeof e.new_string === 'string') ? e.new_string : null)
+        .filter((s) => s !== null);
+      raw = parts.length ? parts.join(MULTIEDIT_SEP) : null;
+    }
+  } else if (toolName === 'NotebookEdit') {
+    raw = typeof input.new_source === 'string' ? input.new_source : null;
+  }
+  if (raw === null) return { body: null, body_truncated: 0 };
+  if (raw.length > BODY_MAX_BYTES) {
+    return { body: raw.slice(0, BODY_MAX_BYTES), body_truncated: 1 };
+  }
+  return { body: raw, body_truncated: 0 };
+}
 
 export async function findTranscripts(rootDir) {
   const entries = await readdir(rootDir, { withFileTypes: true });
@@ -83,12 +114,15 @@ export function parseTranscript(filePath) {
           if (WRITE_TOOL_NAMES.has(c.name)) {
             const path = input.file_path || input.notebook_path;
             if (path) {
+              const { body, body_truncated } = extractBody(c.name, input);
               files.push({
                 ts,
                 turn_uuid,
                 path,
                 action: c.name.toLowerCase(),
                 content_hash: hashOfInput(input),
+                body,
+                body_truncated,
               });
             }
           } else if (c.name === 'Read') {
@@ -100,6 +134,8 @@ export function parseTranscript(filePath) {
                 path,
                 action: 'read',
                 content_hash: null,
+                body: null,
+                body_truncated: 0,
               });
             }
           } else if (c.name === 'Bash') {
@@ -110,6 +146,8 @@ export function parseTranscript(filePath) {
                 path: hit.path,
                 action: hit.action,
                 content_hash: null,
+                body: null,
+                body_truncated: 0,
               });
             }
           }
@@ -149,11 +187,20 @@ export function indexSession(db, projectId, parsed) {
 
   db.prepare(`DELETE FROM session_files WHERE session_id = ?`).run(parsed.id);
   const insertFile = db.prepare(`
-    INSERT INTO session_files(session_id, path, action, content_hash, ts, turn_uuid)
-    VALUES (?, ?, ?, ?, ?, ?)
+    INSERT INTO session_files(session_id, path, action, content_hash, ts, turn_uuid, body, body_truncated)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   for (const f of parsed.files) {
-    insertFile.run(parsed.id, f.path, f.action, f.content_hash, f.ts, f.turn_uuid || null);
+    insertFile.run(
+      parsed.id,
+      f.path,
+      f.action,
+      f.content_hash,
+      f.ts,
+      f.turn_uuid || null,
+      f.body ?? null,
+      f.body_truncated ? 1 : 0
+    );
   }
 }
 

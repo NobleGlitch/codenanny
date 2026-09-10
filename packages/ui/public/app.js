@@ -158,7 +158,112 @@ const FILE_OP_META = {
   'bash-move':  { icon: '↪',  cat: 'bash',  label: 'mv →' },
 };
 
-let _timelineState = null; // { items, filters }
+let _timelineState = null; // { items, filters, bodyCache, expanded }
+
+// ---------------------------------------------------------------- file bodies --
+
+// Cache of file body fetches keyed by session_files row id.
+// Shape: { status: 'loading' | 'ready' | 'error', data?, error? }
+const _fileBodyCache = new Map();
+
+async function fetchFileBody(fileId) {
+  const key = String(fileId);
+  const cached = _fileBodyCache.get(key);
+  if (cached && cached.status !== 'error') return cached;
+  const pending = { status: 'loading' };
+  _fileBodyCache.set(key, pending);
+  try {
+    const r = await fetch(`${BASE}/files/${encodeURIComponent(fileId)}/body`);
+    if (!r.ok) {
+      let msg = `HTTP ${r.status}`;
+      try { const j = await r.json(); if (j && j.error) msg = j.error; } catch {}
+      const entry = { status: 'error', error: msg };
+      _fileBodyCache.set(key, entry);
+      return entry;
+    }
+    const data = await r.json();
+    const entry = { status: 'ready', data };
+    _fileBodyCache.set(key, entry);
+    return entry;
+  } catch (err) {
+    const entry = { status: 'error', error: err.message || 'fetch failed' };
+    _fileBodyCache.set(key, entry);
+    return entry;
+  }
+}
+
+function renderBodyPanelInner(item, entry) {
+  // entry: { status, data?, error? }
+  if (!entry || entry.status === 'loading') {
+    return `<div class="tfb-loading">loading…</div>`;
+  }
+  if (entry.status === 'error') {
+    return `<div class="tfb-error">${esc(entry.error || 'failed to load body')}</div>`;
+  }
+  const d = entry.data || {};
+  // For Read / Bash ops, the backend won't have captured a body.
+  if (!d.has_body) {
+    let msg = 'Body not captured for this op.';
+    if (item && item.cat === 'read') msg = 'Read for context — body not captured.';
+    else if (item && item.cat === 'bash') msg = 'Bash op — file contents not captured.';
+    return `
+      <div class="tfb-head">
+        <span class="tfb-path">${esc(d.path || (item && item.path) || '')}</span>
+      </div>
+      <div class="tfb-empty">${esc(msg)}</div>
+    `;
+  }
+  const truncated = !!d.body_truncated;
+  return `
+    <div class="tfb-head">
+      <span class="tfb-path">${esc(d.path || '')}</span>
+      ${truncated ? `<span class="tfb-trunc">truncated at 64 KB</span>` : ''}
+      <button class="btn-small tfb-copy" type="button">Copy</button>
+    </div>
+    <pre class="tfb-pre">${esc(d.body || '')}</pre>
+  `;
+}
+
+function wireBodyPanel(panel, entry) {
+  if (!panel || !entry || entry.status !== 'ready') return;
+  const copyBtn = panel.querySelector('.tfb-copy');
+  if (!copyBtn) return;
+  copyBtn.onclick = async (ev) => {
+    ev.stopPropagation();
+    const original = copyBtn.textContent;
+    copyBtn.disabled = true;
+    try {
+      await copyToClipboard(entry.data.body || '');
+      flashButton(copyBtn, '✓ Copied', original);
+    } catch (err) {
+      flashButton(copyBtn, '✗ ' + (err.message || 'Failed'), original);
+    }
+  };
+}
+
+async function toggleTimelineBody(rowEl, item) {
+  // Look for an existing sibling body panel.
+  const next = rowEl.nextElementSibling;
+  if (next && next.classList.contains('timeline-file-body') &&
+      next.dataset.fileId === String(item.id)) {
+    next.remove();
+    rowEl.classList.remove('expanded');
+    return;
+  }
+  // Build the panel placeholder.
+  const panel = document.createElement('div');
+  panel.className = 'timeline-file-body';
+  panel.dataset.fileId = String(item.id);
+  panel.innerHTML = renderBodyPanelInner(item, { status: 'loading' });
+  rowEl.insertAdjacentElement('afterend', panel);
+  rowEl.classList.add('expanded');
+
+  const entry = await fetchFileBody(item.id);
+  // The DOM might have changed (user collapsed / switched view). Only update if still present.
+  if (!panel.isConnected) return;
+  panel.innerHTML = renderBodyPanelInner(item, entry);
+  wireBodyPanel(panel, entry);
+}
 
 async function openSession(id) {
   await refreshProjectsCache();
@@ -216,6 +321,7 @@ function buildTimeline(prompts, files) {
     const meta = FILE_OP_META[f.action] || { icon: '•', cat: 'write', label: f.action };
     items.push({
       kind: 'file',
+      id: f.id ?? null,
       ts: f.ts ?? 0,
       cat: meta.cat,
       action: f.action,
@@ -251,23 +357,34 @@ function renderTimeline() {
   const { items, filters } = _timelineState;
   const target = document.getElementById('timeline');
   if (!target) return;
-  const html = items.filter((it) => shouldShow(it, filters)).map((it) => {
-    if (it.kind === 'prompt') {
+  const html = items.map((it, idx) => ({ it, idx }))
+    .filter(({ it }) => shouldShow(it, filters))
+    .map(({ it, idx }) => {
+      if (it.kind === 'prompt') {
+        return `
+          <div class="prompt ${esc(it.role)}">
+            <div class="role">${esc(it.role)} <span class="ts">${formatTs(it.ts)}</span></div>
+            <div class="text">${esc(it.text).replace(/\n/g, '<br>')}</div>
+          </div>`;
+      }
+      const clickable = it.id != null;
       return `
-        <div class="prompt ${esc(it.role)}">
-          <div class="role">${esc(it.role)} <span class="ts">${formatTs(it.ts)}</span></div>
-          <div class="text">${esc(it.text).replace(/\n/g, '<br>')}</div>
+        <div class="timeline-file ${esc(it.cat)}${clickable ? ' clickable' : ''}"
+             data-file-idx="${idx}"${clickable ? ` title="Click to view file body"` : ''}>
+          <span class="tf-icon">${esc(it.icon)}</span>
+          <span class="tf-label">${esc(it.label)}</span>
+          <span class="tf-path">${esc(it.path)}</span>
+          <span class="tf-ts">${formatTs(it.ts)}</span>
         </div>`;
-    }
-    return `
-      <div class="timeline-file ${esc(it.cat)}">
-        <span class="tf-icon">${esc(it.icon)}</span>
-        <span class="tf-label">${esc(it.label)}</span>
-        <span class="tf-path">${esc(it.path)}</span>
-        <span class="tf-ts">${formatTs(it.ts)}</span>
-      </div>`;
-  }).join('');
+    }).join('');
   target.innerHTML = html || `<div class="empty">No events match the current filters.</div>`;
+
+  target.querySelectorAll('.timeline-file[data-file-idx]').forEach((row) => {
+    const idx = Number(row.dataset.fileIdx);
+    const item = items[idx];
+    if (!item || item.id == null) return;
+    row.addEventListener('click', () => toggleTimelineBody(row, item));
+  });
 }
 
 async function copyResume(sessionId, btn) {
@@ -524,11 +641,108 @@ async function runFind(path) {
       </div>
     `;
     target.querySelectorAll('.find-card').forEach((el) => {
-      el.onclick = () => openSession(el.dataset.session);
+      el.addEventListener('click', (ev) => {
+        // Don't navigate when the user clicked an interactive sub-element
+        // (sample path or its expanded body viewer).
+        if (ev.target.closest('.sample-path, .timeline-file-body')) return;
+        openSession(el.dataset.session);
+      });
+    });
+    target.querySelectorAll('.sample-path[data-session]').forEach((el) => {
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        toggleFindCardBody(el);
+      });
     });
   } catch (e) {
     target.innerHTML = `<div class="error">${esc(e.message || 'Search failed')}</div>`;
   }
+}
+
+// Cache of session-detail fetches keyed by session id. Used by find-card
+// sample-path clicks to resolve a path → session_files.id without a
+// dedicated backend endpoint.
+const _sessionFilesCache = new Map();
+
+async function resolveFileIdForPath(sessionId, path) {
+  const key = String(sessionId);
+  let entry = _sessionFilesCache.get(key);
+  if (!entry) {
+    try {
+      const r = await fetch(`${BASE}/sessions/${encodeURIComponent(sessionId)}`);
+      if (!r.ok) {
+        entry = { error: `session fetch HTTP ${r.status}` };
+      } else {
+        const j = await r.json();
+        entry = { files: Array.isArray(j.files) ? j.files : [] };
+      }
+    } catch (err) {
+      entry = { error: err.message || 'session fetch failed' };
+    }
+    _sessionFilesCache.set(key, entry);
+  }
+  if (entry.error) return { error: entry.error };
+  // Find the most-recent file row in this session whose path matches exactly.
+  let best = null;
+  for (const f of entry.files) {
+    if (f.path !== path) continue;
+    if (!best || (f.ts || 0) > (best.ts || 0)) best = f;
+  }
+  if (!best) return { error: 'no matching file in this session' };
+  return { id: best.id, action: best.action };
+}
+
+async function toggleFindCardBody(sampleEl) {
+  // The body panel goes immediately after the find-card (so it spans the
+  // card width and isn't trapped inside the tight .fc-paths column).
+  const card = sampleEl.closest('.find-card');
+  if (!card) return;
+  const sessionId = sampleEl.dataset.session;
+  const path = sampleEl.dataset.path;
+  if (!sessionId || !path) return;
+
+  // Toggle: if the next sibling is already a body panel for this exact path, collapse.
+  const existing = card.nextElementSibling;
+  if (existing && existing.classList.contains('timeline-file-body') &&
+      existing.dataset.findPath === path) {
+    existing.remove();
+    sampleEl.classList.remove('expanded');
+    return;
+  }
+  // Remove any other open find-body panel for this card to keep things tidy.
+  if (existing && existing.classList.contains('timeline-file-body') &&
+      existing.dataset.findCard === card.dataset.session) {
+    existing.remove();
+  }
+  card.querySelectorAll('.sample-path.expanded').forEach((s) => s.classList.remove('expanded'));
+
+  const panel = document.createElement('div');
+  panel.className = 'timeline-file-body find-card-body';
+  panel.dataset.findCard = sessionId;
+  panel.dataset.findPath = path;
+  panel.innerHTML = renderBodyPanelInner(null, { status: 'loading' });
+  card.insertAdjacentElement('afterend', panel);
+  sampleEl.classList.add('expanded');
+
+  const resolved = await resolveFileIdForPath(sessionId, path);
+  if (!panel.isConnected) return;
+  if (resolved.error || resolved.id == null) {
+    panel.innerHTML = renderBodyPanelInner(null, {
+      status: 'error',
+      error: resolved.error || 'could not resolve file id',
+    });
+    return;
+  }
+  // Construct a synthetic item carrying just enough context for renderBodyPanelInner.
+  const synthCat =
+    resolved.action === 'read' ? 'read'
+    : (resolved.action && resolved.action.startsWith('bash')) ? 'bash'
+    : 'write';
+  const synthItem = { path, cat: synthCat };
+  const entry = await fetchFileBody(resolved.id);
+  if (!panel.isConnected) return;
+  panel.innerHTML = renderBodyPanelInner(synthItem, entry);
+  wireBodyPanel(panel, entry);
 }
 
 function renderFindCard(hit, now) {
@@ -537,7 +751,7 @@ function renderFindCard(hit, now) {
     .map(([action, n]) => `<span class="ac-chip">${ACTION_ICONS[action] || '•'} ${esc(action)} ×${n}</span>`)
     .join(' ');
   const samplePaths = hit.sample_paths
-    .map((p) => `<div class="sample-path">${esc(p)}</div>`)
+    .map((p) => `<div class="sample-path" data-session="${esc(hit.session_id)}" data-path="${esc(p)}" title="Click to view most recent body for this path">${esc(p)}</div>`)
     .join('');
   return `
     <div class="find-card" data-session="${esc(hit.session_id)}">

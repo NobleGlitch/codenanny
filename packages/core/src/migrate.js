@@ -8,6 +8,8 @@
  */
 export function migrateSchema(db) {
   addColumnIfMissing(db, 'session_files', 'turn_uuid', 'TEXT');
+  addColumnIfMissing(db, 'session_files', 'body', 'TEXT');
+  addColumnIfMissing(db, 'session_files', 'body_truncated', 'INTEGER DEFAULT 0');
 }
 
 function addColumnIfMissing(db, table, column, type) {

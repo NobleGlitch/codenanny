@@ -372,4 +372,82 @@ mark { background: #ffd33d40; color: #f0f0f0; padding: 0 2px; border-radius: 2px
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.sample-path:hover { background: #1c2128; color: #e6e6e6; }
+.sample-path.expanded { color: #79c0ff; }
+
+/* ---------- inline file-body viewer ---------- */
+
+.timeline-file.clickable { cursor: pointer; }
+.timeline-file.clickable.expanded { background: rgba(31,111,235,0.10); }
+
+.timeline-file-body {
+  border-top: 1px solid #21262d;
+  border-bottom: 1px solid #21262d;
+  background: #0d1117;
+  margin: 2px 0 8px;
+  border-radius: 0 0 4px 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+}
+.find-card-body {
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.tfb-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid #21262d;
+  background: #161b22;
+  font-size: 12px;
+}
+.tfb-path {
+  flex: 1;
+  color: #c9d1d9;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tfb-copy { flex-shrink: 0; }
+.tfb-trunc {
+  background: #3a2e0a;
+  border: 1px solid #d29922;
+  color: #f0c674;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.tfb-pre {
+  margin: 0;
+  padding: 10px 12px;
+  max-height: 400px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #e6e6e6;
+  background: #0d1117;
+  font-family: ui-monospace, monospace;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.tfb-loading,
+.tfb-empty {
+  padding: 10px 12px;
+  color: #8b949e;
+  font-style: italic;
+  font-size: 12.5px;
+}
+.tfb-error {
+  padding: 10px 12px;
+  color: #f85149;
+  font-size: 12.5px;
 }

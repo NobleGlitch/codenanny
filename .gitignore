@@ -13,3 +13,4 @@ coverage/
 .DS_Store
 .codenanny/
 codenanny.config.local.json
+codenanny.db.bak.*

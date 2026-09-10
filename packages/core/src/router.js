@@ -85,6 +85,29 @@ export function createRouter({ api, db, events, logger = console }) {
     res.json(api.files.recent(limit));
   });
 
+  r.get('/api/files/:id/body', (req, res) => {
+    const id = parseInt(req.params.id);
+    if (!Number.isFinite(id) || String(id) !== req.params.id) {
+      return res.status(400).json({ error: 'id must be an integer' });
+    }
+    const row = api.files.byId(id);
+    if (!row) return res.status(404).json({ error: 'file not found' });
+    res.json({
+      id: row.id,
+      session_id: row.session_id,
+      session_title: row.session_title,
+      project_id: row.project_id,
+      path: row.path,
+      action: row.action,
+      ts: row.ts,
+      turn_uuid: row.turn_uuid,
+      content_hash: row.content_hash,
+      body: row.body || null,
+      body_truncated: !!row.body_truncated,
+      has_body: !!row.body,
+    });
+  });
+
   r.get('/api/files/by-path', (req, res) => {
     const path = (req.query.path || '').toString().trim();
     if (!path) return res.status(400).json({ error: 'path (string) required' });

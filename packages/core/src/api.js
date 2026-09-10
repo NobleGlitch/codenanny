@@ -100,6 +100,14 @@ export function createApi(db) {
           ORDER BY f.ts DESC LIMIT ?
         `).all(limit);
       },
+      byId(id) {
+        return db.prepare(`
+          SELECT f.*, s.title AS session_title, s.project_id
+          FROM session_files f
+          JOIN sessions s ON s.id = f.session_id
+          WHERE f.id = ?
+        `).get(id);
+      },
     },
     projects: {
       list() {
